@@ -17,7 +17,7 @@ bar-and-go-crm/
 └── .env.example         Variables de entorno
 ```
 
-Documentación adicional: [guía de arranque](docs/GUIA-ARRANQUE.md) (paso a paso, despliegue de prueba y problemas frecuentes) y [registro de cambios y motivos](docs/CAMBIOS.md).
+Documentación adicional: [guía de arranque](docs/GUIA-ARRANQUE.md) (paso a paso en bash y PowerShell, despliegue de prueba, acceso remoto por túnel y problemas frecuentes) y [registro de cambios y motivos](docs/CAMBIOS.md).
 
 ## Puesta en marcha
 
@@ -64,6 +64,16 @@ VITE_API_BASE_URL=https://tu-dominio/api npm run build
 ```
 
 Con `prod` el esquema tiene que existir de antemano: si la base de datos está vacía, el arranque falla en la validación de Hibernate. Mientras no haya migraciones versionadas, basta con arrancar una vez con `dev` para crear el esquema (y cargar los datos de demo si se quieren).
+
+### Acceso remoto para pruebas
+
+Para probar la aplicación desde otro dispositivo por internet sin desplegarla, se publica el servidor de preview de Vite con un túnel (Cloudflare Quick Tunnel o ngrok). Vite reenvía `/api` al backend, así que basta un solo túnel y el backend no se expone:
+
+```
+navegador remoto --HTTPS--> túnel --> vite preview :4173 --/api--> backend :8080
+```
+
+Requiere compilar el frontend con `VITE_API_BASE_URL=/api` y arrancar el preview con `VITE_ALLOWED_HOSTS=.trycloudflare.com`. Los pasos completos están en el [apartado 8 de la guía de arranque](docs/GUIA-ARRANQUE.md#8-acceso-desde-otro-equipo-por-internet). La URL del túnel es pública mientras esté activo, y las credenciales de demo también lo son.
 
 ### Credenciales de demo
 

@@ -73,6 +73,12 @@ curl -s -X POST http://localhost:8080/api/auth/login \
   -d '{"email":"admin@bar.com","password":"admin123"}'
 ```
 
+En PowerShell:
+
+```powershell
+Invoke-RestMethod -Method Post -Uri http://localhost:8080/api/auth/login -ContentType "application/json" -Body '{"email":"admin@bar.com","password":"admin123"}'
+```
+
 Debe devolver un JSON con `accessToken`.
 
 ## 5. Frontend
@@ -99,37 +105,70 @@ cd backend && ./mvnw verify           # 44 tests: unitarios, seguridad e integra
 cd frontend && npm run lint && npm run build
 ```
 
+En PowerShell, un comando por línea:
+
+```powershell
+cd backend
+.\mvnw.cmd verify
+cd ..\frontend
+npm run lint
+npm run build
+```
+
 Los tests de integración usan Testcontainers y necesitan Docker en marcha. Sin Docker se omiten, y el resto de la suite se ejecuta igual.
 
 ## 7. Despliegue de prueba (perfil prod)
 
-Reproduce en local un despliegue de producción: jar ejecutable, build estático del frontend y perfil `prod`.
+Reproduce en local un despliegue de producción: jar ejecutable, build estático del frontend y perfil `prod`. Se necesitan dos terminales abiertas en la raíz del repositorio.
 
-```bash
+En PowerShell (Windows):
+
+```powershell
+# Terminal 1
 # 1. Base de datos limpia
-docker compose down -v && docker compose up -d --wait
+docker compose down -v
+docker compose up -d --wait
 
 # 2. Jar del backend
 cd backend
-./mvnw clean package
+.\mvnw.cmd clean package
 
 # 3. Crear el esquema (prod solo lo valida). Arrancar con dev, esperar a
 #    "Datos de demo cargados" en el log y parar con Ctrl+C
-SPRING_PROFILES_ACTIVE=dev java -jar target/crm-backend-0.0.1-SNAPSHOT.jar
+$env:SPRING_PROFILES_ACTIVE="dev"; java -jar target\crm-backend-0.0.1-SNAPSHOT.jar
 
 # 4. Arrancar en prod, permitiendo el origen del preview de Vite
-SPRING_PROFILES_ACTIVE=prod CORS_ALLOWED_ORIGINS=http://localhost:4173 \
-  java -jar target/crm-backend-0.0.1-SNAPSHOT.jar
+$env:SPRING_PROFILES_ACTIVE="prod"; $env:CORS_ALLOWED_ORIGINS="http://localhost:4173"
+java -jar target\crm-backend-0.0.1-SNAPSHOT.jar
 
-# 5. En otra terminal: build de producción del frontend y servidor estático
+# Terminal 2
+# 5. Build de producción del frontend y servidor estático
 cd frontend
-VITE_SHOW_DEMO_LOGIN=true npm run build
+$env:VITE_SHOW_DEMO_LOGIN="true"; npm run build
 npm run preview                      # http://localhost:4173
 ```
 
-En PowerShell, las variables se definen antes del comando: `$env:SPRING_PROFILES_ACTIVE="prod"; java -jar ...`.
+En Linux, macOS o Git Bash:
 
-En Git Bash (Windows), un valor que empieza por `/`, como `VITE_API_BASE_URL=/api`, se convierte en una ruta de Windows (`C:/Program Files/Git/api`) y el frontend deja de encontrar la API. Hay que anteponer `MSYS_NO_PATHCONV=1` o usar PowerShell.
+```bash
+# Terminal 1
+docker compose down -v && docker compose up -d --wait
+cd backend
+./mvnw clean package
+SPRING_PROFILES_ACTIVE=dev java -jar target/crm-backend-0.0.1-SNAPSHOT.jar      # Ctrl+C tras "Datos de demo cargados"
+SPRING_PROFILES_ACTIVE=prod CORS_ALLOWED_ORIGINS=http://localhost:4173 java -jar target/crm-backend-0.0.1-SNAPSHOT.jar
+
+# Terminal 2
+cd frontend
+VITE_SHOW_DEMO_LOGIN=true npm run build
+npm run preview
+```
+
+Notas sobre la terminal:
+
+- Windows PowerShell 5.1 no admite `&&`; hay que poner un comando por línea. Las variables `$env:` duran lo que la terminal, así que conviene abrir una nueva para cambiar de configuración.
+- `docker compose down -v` borra los datos. Si la base de datos ya tiene el esquema actual, basta `docker compose up -d --wait` y se puede saltar el paso 3.
+- En Git Bash (Windows), un valor que empieza por `/`, como `VITE_API_BASE_URL=/api`, se convierte en una ruta de Windows (`C:/Program Files/Git/api`) y el frontend deja de encontrar la API. Hay que anteponer `MSYS_NO_PATHCONV=1` o usar PowerShell.
 
 ### Recorrido de verificación manual
 
@@ -158,14 +197,14 @@ Se usa Cloudflare Quick Tunnel, que no requiere cuenta. Instalación en Windows:
 winget install --id Cloudflare.cloudflared
 ```
 
-Pasos (PowerShell, desde la raíz del repositorio; backend y base de datos preparados como en el apartado 7):
+Pasos en PowerShell, cada terminal abierta en la raíz del repositorio. Base de datos, jar y esquema tienen que estar preparados como en los pasos 1 a 3 del apartado 7.
 
 ```powershell
-# Terminal 1: backend en prod (CORS no necesita cambios: el navegador solo habla con el preview)
+# Terminal 1: backend en prod. CORS no necesita cambios: el navegador solo habla con el preview
 cd backend
-$env:SPRING_PROFILES_ACTIVE="prod"; java -jar target/crm-backend-0.0.1-SNAPSHOT.jar
+$env:SPRING_PROFILES_ACTIVE="prod"; java -jar target\crm-backend-0.0.1-SNAPSHOT.jar
 
-# Terminal 2: frontend con la API en ruta relativa y servidor admitiendo el dominio del túnel
+# Terminal 2: frontend con la API en ruta relativa y el servidor admitiendo el dominio del túnel
 cd frontend
 $env:VITE_API_BASE_URL="/api"; $env:VITE_SHOW_DEMO_LOGIN="true"; npm run build
 $env:VITE_ALLOWED_HOSTS=".trycloudflare.com"; npm run preview
@@ -174,14 +213,28 @@ $env:VITE_ALLOWED_HOSTS=".trycloudflare.com"; npm run preview
 cloudflared tunnel --url http://localhost:4173
 ```
 
-`cloudflared` muestra una URL del tipo `https://<nombre-aleatorio>.trycloudflare.com`. Esa URL se abre en el otro dispositivo, y el recorrido del apartado 7 sirve igual.
+El build del apartado 7 no sirve para el túnel: apunta a `http://localhost:8080/api`, y en el dispositivo remoto `localhost` es el propio dispositivo. Por eso hay que recompilar con `VITE_API_BASE_URL="/api"`.
+
+`cloudflared` muestra en su salida una URL del tipo `https://<nombre-aleatorio>.trycloudflare.com`. Líneas como `Cannot determine default configuration path` o las del proxy ICMP son informativas. El túnel está listo cuando aparece `Registered tunnel connection`.
+
+Comprobación antes de abrir la URL en otro dispositivo (desde cualquier terminal; `curl.exe` evita el alias `curl` de PowerShell 5.1):
+
+```powershell
+curl.exe -s -o NUL -w "%{http_code}`n" https://<nombre-aleatorio>.trycloudflare.com/login
+curl.exe -s -o NUL -w "%{http_code}`n" https://<nombre-aleatorio>.trycloudflare.com/api/products
+```
+
+Las dos deben devolver `200`. Después, la URL se abre en el otro dispositivo y el recorrido del apartado 7 sirve igual.
 
 Consideraciones:
 
-- La URL es pública mientras el túnel esté activo, y las credenciales de demo también lo son. Hay que cerrar el túnel (Ctrl+C) al terminar.
+- La URL es pública mientras el túnel esté activo, y las credenciales de demo también lo son.
 - Cada ejecución de `cloudflared` genera una URL nueva. No hace falta recompilar: `VITE_ALLOWED_HOSTS=.trycloudflare.com` admite cualquier subdominio.
+- Los túneles sin cuenta no tienen garantía de disponibilidad; sirven para pruebas, no para un despliegue permanente.
 - Con ngrok el procedimiento es el mismo: `ngrok http 4173` y `VITE_ALLOWED_HOSTS=.ngrok-free.app`.
 - Si el backend no está en `localhost:8080`, se indica con `API_PROXY_TARGET` al arrancar el preview.
+
+Cierre, en este orden: Ctrl+C en la terminal 3 (túnel), en la 2 (preview) y en la 1 (backend). Después, `docker compose stop` para parar la base de datos sin borrar los datos.
 
 ## 9. Problemas frecuentes
 
@@ -196,4 +249,5 @@ Consideraciones:
 | `mvnw package` falla en Windows con "Unable to rename" | El jar lo tiene abierto un backend en ejecución | Parar el backend antes de empaquetar |
 | Vite avisa de la versión de Node | Node por debajo de 20.19 / 22.12 | Actualizar Node |
 | El login muestra "No se puede conectar con el servidor" con `VITE_API_BASE_URL=/api` | Git Bash convirtió `/api` en una ruta de Windows | Recompilar con `MSYS_NO_PATHCONV=1` o desde PowerShell |
+| Desde el dispositivo remoto, el login muestra "No se puede conectar con el servidor" | El build se hizo sin `VITE_API_BASE_URL=/api` y apunta a `localhost:8080` | Recompilar como en el apartado 8 |
 | La URL del túnel responde "Blocked request. This host is not allowed" | El dominio del túnel no está en `VITE_ALLOWED_HOSTS` | Arrancar el preview con `VITE_ALLOWED_HOSTS=.trycloudflare.com` |
