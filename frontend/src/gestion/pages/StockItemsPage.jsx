@@ -4,10 +4,11 @@ import { useAuth } from '../../context/useAuth';
 import { masterData, stockItems } from '../api';
 import { ALLERGENS } from '../labels';
 import { asOptions, useLookups } from '../lookups';
-import { formatDate, formatEUR, formatQty, toNumber, useForm, useLoad } from '../support';
-import {
-  Badge, DataTable, ErrorNotice, Field, FormGrid, Input, Page, Panel, Select, Sheet, Tabs, Toolbar
-} from '../ui';
+import { Badge, DataTable, ErrorNotice, Field, FormGrid, Input, Page, Panel, Select, Sheet, Tabs, Toolbar } from '../components';
+import { useForm } from '../../hooks/useForm';
+import { useLoad } from '../../hooks/useLoad';
+import { formatDate, formatEUR, formatQty, toNumber } from '../../lib/format';
+import { useLines } from '../../hooks/useLines';
 
 const EMPTY = {
   code: '', name: '', itemCategoryId: '', purchaseUnit: '', stockUnit: '', usageUnit: '', conversions: [],
@@ -109,9 +110,7 @@ const StockItemForm = ({ item, categories, onClose }) => {
     ...prev,
     allergens: prev.allergens.includes(code) ? prev.allergens.filter((a) => a !== code) : [...prev.allergens, code]
   }));
-  const setConversion = (index, field, value) => setValues((prev) => ({
-    ...prev, conversions: prev.conversions.map((c, i) => (i === index ? { ...c, [field]: value } : c))
-  }));
+  const conversions = useLines(form, 'conversions', { create: () => ({ fromUnit: '', toUnit: '', factor: '' }) });
 
   const save = async (e) => {
     e.preventDefault();
@@ -162,19 +161,19 @@ const StockItemForm = ({ item, categories, onClose }) => {
           {v.conversions.map((c, i) => (
             <div className="g-line" key={i}>
               <Select label="De" placeholder="—" value={c.fromUnit ?? ''} options={unitOptions}
-                      onChange={(e) => setConversion(i, 'fromUnit', e.target.value)} error={errors[`conversions[${i}].fromUnit`]} />
+                      onChange={(e) => conversions.update(i, 'fromUnit', e.target.value)} error={conversions.error(i, 'fromUnit')} />
               <Input label="Factor" type="number" min="0" step="any" value={c.factor ?? ''}
-                     onChange={(e) => setConversion(i, 'factor', e.target.value)} error={errors[`conversions[${i}].factor`]} />
+                     onChange={(e) => conversions.update(i, 'factor', e.target.value)} error={conversions.error(i, 'factor')} />
               <Select label="A" placeholder="—" value={c.toUnit ?? ''} options={unitOptions}
-                      onChange={(e) => setConversion(i, 'toUnit', e.target.value)} error={errors[`conversions[${i}].toUnit`]} />
+                      onChange={(e) => conversions.update(i, 'toUnit', e.target.value)} error={conversions.error(i, 'toUnit')} />
               <button type="button" className="g-icon-btn" aria-label="Quitar conversión"
-                      onClick={() => setValues((p) => ({ ...p, conversions: p.conversions.filter((_, j) => j !== i) }))}>
+                      onClick={() => conversions.remove(i)}>
                 <Trash2 size={18} />
               </button>
             </div>
           ))}
           <button type="button" className="btn btn-outline btn-sm" style={{ alignSelf: 'flex-start' }}
-                  onClick={() => setValues((p) => ({ ...p, conversions: [...p.conversions, { fromUnit: '', toUnit: '', factor: '' }] }))}>
+                  onClick={conversions.add}>
             <Plus size={16} />Añadir conversión
           </button>
         </div>

@@ -278,7 +278,7 @@ Los tests de integración necesitan Docker; si no está disponible, se omiten y 
 - **Monolito modular con Spring Modulith** en lugar de paquetes por capa (`controller`, `service`, `entity`...). Cada área de negocio es un módulo con API explícita y dependencias verificadas en los tests. Prepara la ampliación ERP (compras, inventario, escandallos) sin que los módulos nuevos se acoplen a los internos de los existentes. Cuando un módulo necesita algo de otro que dependería de él, se invierte la dependencia: la carta pregunta si un producto tiene ventas a través de `ProductSalesCheck`, que implementa el módulo de pedidos.
 - **Bloqueo optimista (`@Version`)** en las entidades que se editan desde el panel: si dos personas modifican el mismo registro, la segunda recibe un 409 en vez de pisar el cambio.
 - **Enums en inglés**, con las etiquetas visibles resueltas en el frontend.
-- **Sistema de diseño con tokens CSS** (`frontend/src/styles/tokens.css`): colores, tipografía (Sora e Inter), espaciado y tamaños táctiles. Las pantallas de Gestión solo usan tokens y se cargan bajo demanda (`React.lazy`), así que el panel de sala y la parte de cliente no cargan su código.
+- **Sistema de diseño con tokens CSS** (`frontend/src/design/tokens.css`): colores, tipografía (Sora e Inter), espaciado y tamaños táctiles. Las pantallas de Gestión solo usan tokens y se cargan bajo demanda (`React.lazy`), así que el panel de sala y la parte de cliente no cargan su código.
 
 ## Limitaciones conocidas y trabajo pendiente
 

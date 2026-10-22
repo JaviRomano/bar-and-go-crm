@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -9,6 +9,7 @@ import HomePage from './pages/HomePage';
 import AdminDashboard from './pages/AdminDashboard';
 import NotFound from './pages/NotFound';
 import { BACK_OFFICE_ROLES, MANAGEMENT_ROLES, USER_ROLES } from './utils/constants';
+import { GESTION_BASE, GESTION_SCREENS } from './gestion/navigation';
 
 // Componentes Admin
 import ProductList from './components/admin/ProductList';
@@ -22,28 +23,6 @@ import MyReservations from './components/client/MyReservations';
 import MyOrders from './components/client/MyOrders';
 import Checkout from './components/client/Checkout';
 
-// Gestión (back-office ERP): se carga al entrar, no forma parte del bundle inicial
-const SuppliersPage = lazy(() => import('./gestion/pages/SuppliersPage'));
-const StockItemsPage = lazy(() => import('./gestion/pages/StockItemsPage'));
-const PurchaseOrdersPage = lazy(() => import('./gestion/pages/PurchaseOrdersPage'));
-const GoodsReceiptPage = lazy(() => import('./gestion/pages/GoodsReceiptPage'));
-const InventoryPage = lazy(() => import('./gestion/pages/InventoryPage'));
-const StockCountsPage = lazy(() => import('./gestion/pages/StockCountsPage'));
-const RecipesPage = lazy(() => import('./gestion/pages/RecipesPage'));
-const WastePage = lazy(() => import('./gestion/pages/WastePage'));
-const ReportsPage = lazy(() => import('./gestion/pages/ReportsPage'));
-
-const GESTION_ROUTES = [
-  { path: 'proveedores', element: <SuppliersPage />, roles: MANAGEMENT_ROLES },
-  { path: 'articulos', element: <StockItemsPage />, roles: BACK_OFFICE_ROLES },
-  { path: 'compras', element: <PurchaseOrdersPage />, roles: MANAGEMENT_ROLES },
-  { path: 'recepcion', element: <GoodsReceiptPage />, roles: BACK_OFFICE_ROLES },
-  { path: 'inventario', element: <InventoryPage />, roles: BACK_OFFICE_ROLES },
-  { path: 'recuentos', element: <StockCountsPage />, roles: BACK_OFFICE_ROLES },
-  { path: 'escandallos', element: <RecipesPage />, roles: BACK_OFFICE_ROLES },
-  { path: 'mermas', element: <WastePage />, roles: BACK_OFFICE_ROLES },
-  { path: 'informes', element: <ReportsPage />, roles: MANAGEMENT_ROLES }
-];
 
 function App() {
   return (
@@ -102,11 +81,11 @@ function App() {
                 }
               />
 
-              {GESTION_ROUTES.map(({ path, element, roles }) => (
+              {GESTION_SCREENS.map((screen) => (
                 <Route
-                  key={path}
-                  path={`/admin/gestion/${path}`}
-                  element={<ProtectedRoute allowedRoles={roles}>{element}</ProtectedRoute>}
+                  key={screen.path}
+                  path={`${GESTION_BASE}/${screen.path}`}
+                  element={<ProtectedRoute allowedRoles={screen.roles}><screen.page /></ProtectedRoute>}
                 />
               ))}
 

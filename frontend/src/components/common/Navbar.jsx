@@ -10,18 +10,10 @@ import {
   UtensilsCrossed,
   Package,
   Menu,
-  X,
-  Truck,
-  Boxes,
-  ClipboardList,
-  PackageCheck,
-  Warehouse,
-  ListChecks,
-  ChefHat,
-  Trash2,
-  BarChart3
+  X
 } from 'lucide-react';
 import BrandMark from './BrandMark';
+import { GESTION_BASE, gestionScreensFor } from '../../gestion/navigation';
 import './Navbar.css';
 
 const Navbar = () => {
@@ -41,7 +33,7 @@ const Navbar = () => {
     navigate('/login');
   };
 
-  // Menú según rol: la carta, las compras y los informes son de admin y encargado
+  // Menú según rol: la carta es de admin y encargado; Gestión filtra sus pantallas por rol
   const sections = backOffice ? [
     {
       title: 'Sala',
@@ -54,17 +46,9 @@ const Navbar = () => {
     },
     {
       title: 'Gestión',
-      items: [
-        ...(manager ? [{ path: '/admin/gestion/proveedores', icon: Truck, label: 'Proveedores' }] : []),
-        { path: '/admin/gestion/articulos', icon: Boxes, label: 'Artículos' },
-        ...(manager ? [{ path: '/admin/gestion/compras', icon: ClipboardList, label: 'Compras' }] : []),
-        { path: '/admin/gestion/recepcion', icon: PackageCheck, label: 'Recepción' },
-        { path: '/admin/gestion/inventario', icon: Warehouse, label: 'Inventario' },
-        { path: '/admin/gestion/recuentos', icon: ListChecks, label: 'Recuentos' },
-        { path: '/admin/gestion/escandallos', icon: ChefHat, label: 'Escandallos' },
-        { path: '/admin/gestion/mermas', icon: Trash2, label: 'Mermas' },
-        ...(manager ? [{ path: '/admin/gestion/informes', icon: BarChart3, label: 'Informes' }] : [])
-      ]
+      items: gestionScreensFor(user.role).map((screen) => ({
+        path: `${GESTION_BASE}/${screen.path}`, icon: screen.icon, label: screen.label
+      }))
     }
   ] : [
     {

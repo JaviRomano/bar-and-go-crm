@@ -47,13 +47,27 @@ Rutas `/admin/gestion/*`, con `React.lazy`: el código de cada pantalla se desca
 
 - **`ConfirmModal` en toda acción que mueve stock:** recepción, traspaso, ajuste, cierre de recuento, producción, merma, y en Pedidos, entregar (descuenta escandallos) y cancelar un pedido entregado (lo devuelve; solo encargado).
 - **Errores de validación por campo:** el backend devuelve `validationErrors` con claves como `supplierId` o `lines[0].quantity`. El hook `useForm` los guarda y cada campo muestra el suyo. Las líneas de pedidos, albaranes y escandallos usan la clave con índice.
-- **Piezas compartidas** en `src/gestion/`: cliente de la API (`api.js`), carga y formularios (`support.js`), catálogos y confirmación (`lookups.js`), componentes (`ui.jsx`), gráficas (`charts.jsx`) y etiquetas de los enums (`labels.js`).
+- **Estructura:**
+
+  ```
+  src/
+  ├── design/        tokens.css (fuente de verdad visual) y tokens.js
+  ├── lib/           format.js (importes, cantidades, fechas), apiErrors.js
+  ├── hooks/         useLoad, useForm (errores por campo), useLines (líneas editables), useConfirm
+  └── gestion/
+      ├── navigation.js   pantallas, rutas, iconos y roles: lo usan App y Navbar
+      ├── api.js          cliente de los endpoints del ERP
+      ├── labels.js       etiquetas en español de los enums
+      ├── lookups.js      catálogos compartidos (almacenes, artículos, proveedores, unidades)
+      ├── components/     layout, feedback, DataTable, fields, Sheet, charts y gestion.css
+      └── pages/          una por pantalla; inventory/ y reports/ con un fichero por pestaña
+  ```
 
 ## 4. Sistema de diseño
 
 Los ficheros de diseño llegaron con los nombres cruzados: `frontend/DESIGN.md` contiene el `tokens.ts` y `frontend/bargo-favicon.svg` contiene el `tokens.css`. No se han modificado ni se suben al repositorio. Se ha usado su contenido así:
 
-- `src/styles/tokens.css`: copia del `tokens.css`, la fuente de verdad (colores con tema claro y oscuro, Sora e Inter, espaciado base 4, radios, tamaños táctiles, capas). Sin colores sueltos fuera de él.
+- `src/design/tokens.css`: copia del `tokens.css`, la fuente de verdad (colores con tema claro y oscuro, Sora e Inter, espaciado base 4, radios, tamaños táctiles, capas). Sin colores sueltos fuera de él.
 - `src/design/tokens.js`: versión JS del `tokens.ts`. **Los estados de pedido se alinean con el enum del backend** (`CREATED`, `IN_PREPARATION`...), que era la decisión que el fichero dejaba pendiente.
 - `index.css` se reescribe sobre los tokens y mantiene las clases y variables que usan las pantallas anteriores (`--primary-color` pasa a ser alias de `--accent-text`, etc.), así que toda la aplicación adopta la paleta sin reescribir esas pantallas.
 - Marca: el símbolo del logotipo (`Bar&Go — Logo.html`) como componente `BrandMark`, el favicon en `public/favicon.svg` y el nombre en Sora con el «&» en ámbar.

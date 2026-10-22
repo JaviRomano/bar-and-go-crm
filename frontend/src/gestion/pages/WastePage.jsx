@@ -3,9 +3,12 @@ import { useAuth } from '../../context/useAuth';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import { masterData, waste } from '../api';
 import { WASTE_REASONS, toOptions } from '../labels';
-import { asOptions, itemLabel, unitOptionsFor, useConfirm, useLookups } from '../lookups';
-import { daysAgo, formatDateTime, formatEUR, formatQty, isoDate, toNumber, useForm, useLoad } from '../support';
-import { Badge, DataTable, ErrorNotice, FormGrid, Input, Notice, Page, Panel, Select, Tabs, Textarea, Toolbar } from '../ui';
+import { asOptions, itemLabel, unitOptionsFor, useLookups } from '../lookups';
+import { Badge, DataTable, ErrorNotice, FormGrid, Input, Notice, Page, Panel, Select, Tabs, Textarea, Toolbar } from '../components';
+import { useConfirm } from '../../hooks/useConfirm';
+import { useForm } from '../../hooks/useForm';
+import { useLoad } from '../../hooks/useLoad';
+import { daysAgo, formatDateTime, formatEUR, formatQty, isoDate, toNumber } from '../../lib/format';
 
 const WastePage = () => {
   const { canManage } = useAuth();

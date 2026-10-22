@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { suppliers } from '../api';
-import { useForm, useLoad, toNumber } from '../support';
-import { Badge, DataTable, ErrorNotice, FormGrid, Input, Page, Panel, Sheet, Textarea, Toolbar } from '../ui';
+import { Badge, DataTable, ErrorNotice, FormGrid, Input, Page, Panel, Sheet, Textarea, Toolbar } from '../components';
+import { useForm } from '../../hooks/useForm';
+import { useLoad } from '../../hooks/useLoad';
+import { toNumber } from '../../lib/format';
 
 const EMPTY = {
   taxId: '', legalName: '', tradeName: '', contactName: '', email: '', phone: '', paymentTerms: '',

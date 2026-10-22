@@ -4,11 +4,13 @@ import { useAuth } from '../../context/useAuth';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import { masterData, recipes } from '../api';
 import { ALLERGENS, RECIPE_TYPES, toOptions } from '../labels';
-import { asOptions, itemLabel, unitOptionsFor, useConfirm, useLookups } from '../lookups';
-import { formatDateTime, formatEUR, formatPct, formatQty, toNumber, useForm, useLoad } from '../support';
-import {
-  Badge, DataTable, ErrorNotice, Field, FormGrid, Input, Notice, Page, Panel, Select, Sheet, Tabs, Textarea, Toolbar
-} from '../ui';
+import { asOptions, itemLabel, unitOptionsFor, useLookups } from '../lookups';
+import { Badge, DataTable, ErrorNotice, Field, FormGrid, Input, Notice, Page, Panel, Select, Sheet, Tabs, Textarea, Toolbar } from '../components';
+import { useConfirm } from '../../hooks/useConfirm';
+import { useForm } from '../../hooks/useForm';
+import { useLoad } from '../../hooks/useLoad';
+import { formatDateTime, formatEUR, formatPct, formatQty, toNumber } from '../../lib/format';
+import { useLines } from '../../hooks/useLines';
 
 const RecipesPage = () => {
   const { canManage } = useAuth();
@@ -181,21 +183,20 @@ const RecipeForm = ({ recipe, recipes: allRecipes, onClose }) => {
       }))
       : [newLine()]
   });
-  const { values: v, set, errors, setValues } = form;
+  const { values: v, set, errors } = form;
   const itemsById = Object.fromEntries(items.map((i) => [i.id, i]));
   const preparations = allRecipes.filter((r) => r.type === 'PREPARATION' && r.id !== recipe.id);
   const unitCodes = units.map((u) => ({ value: u.code, label: u.code }));
 
-  const setLine = (index, field, value) => setValues((prev) => ({
-    ...prev,
-    lines: prev.lines.map((l, i) => {
-      if (i !== index) return l;
-      const next = { ...l, [field]: value };
-      if (field === 'stockItemId') next.unit = itemsById[value]?.usageUnit ?? '';
-      if (field === 'subRecipeId') next.unit = preparations.find((r) => String(r.id) === String(value))?.yieldUnit ?? '';
-      return next;
-    })
-  }));
+  // Al elegir ingrediente, su unidad de uso o la de rendimiento de la elaboración
+  const lines = useLines(form, 'lines', {
+    create: newLine,
+    derive: (line, field, value) => {
+      if (field === 'stockItemId') return { ...line, unit: itemsById[value]?.usageUnit ?? '' };
+      if (field === 'subRecipeId') return { ...line, unit: preparations.find((r) => String(r.id) === String(value))?.yieldUnit ?? '' };
+      return line;
+    }
+  });
 
   const save = async (e) => {
     e.preventDefault();
@@ -252,30 +253,30 @@ const RecipeForm = ({ recipe, recipes: allRecipes, onClose }) => {
           <div className="g-lines">
             {v.lines.map((line, i) => (
               <div className="g-line" key={i}>
-                <Select label="Tipo" value={line.kind} onChange={(e) => setLine(i, 'kind', e.target.value)}
+                <Select label="Tipo" value={line.kind} onChange={(e) => lines.update(i, 'kind', e.target.value)}
                         options={[{ value: 'item', label: 'Artículo' }, { value: 'sub', label: 'Elaboración' }]} />
                 {line.kind === 'item' ? (
                   <Select label="Artículo" placeholder="Elige" value={line.stockItemId} options={asOptions(items, itemLabel)}
-                          onChange={(e) => setLine(i, 'stockItemId', e.target.value)} error={errors[`lines[${i}].stockItemId`]} />
+                          onChange={(e) => lines.update(i, 'stockItemId', e.target.value)} error={lines.error(i, 'stockItemId')} />
                 ) : (
                   <Select label="Elaboración" placeholder="Elige" value={line.subRecipeId} options={asOptions(preparations)}
-                          onChange={(e) => setLine(i, 'subRecipeId', e.target.value)} error={errors[`lines[${i}].subRecipeId`]} />
+                          onChange={(e) => lines.update(i, 'subRecipeId', e.target.value)} error={lines.error(i, 'subRecipeId')} />
                 )}
                 <Input label="Cantidad" type="number" min="0" step="any" value={line.grossQuantity}
-                       onChange={(e) => setLine(i, 'grossQuantity', e.target.value)} error={errors[`lines[${i}].grossQuantity`]} />
+                       onChange={(e) => lines.update(i, 'grossQuantity', e.target.value)} error={lines.error(i, 'grossQuantity')} />
                 <Select label="Unidad" value={line.unit}
                         options={line.kind === 'item' ? unitOptionsFor(itemsById[line.stockItemId]) : unitCodes}
-                        onChange={(e) => setLine(i, 'unit', e.target.value)} error={errors[`lines[${i}].unit`]} />
+                        onChange={(e) => lines.update(i, 'unit', e.target.value)} error={lines.error(i, 'unit')} />
                 <Input label="Aprovechamiento %" type="number" min="0" max="100" step="any" value={line.yieldPct}
-                       placeholder="100" onChange={(e) => setLine(i, 'yieldPct', e.target.value)} error={errors[`lines[${i}].yieldPct`]} />
+                       placeholder="100" onChange={(e) => lines.update(i, 'yieldPct', e.target.value)} error={lines.error(i, 'yieldPct')} />
                 <button type="button" className="g-icon-btn" aria-label="Quitar ingrediente"
-                        onClick={() => setValues((p) => ({ ...p, lines: p.lines.filter((_, j) => j !== i) }))}>
+                        onClick={() => lines.remove(i)}>
                   <Trash2 size={18} />
                 </button>
               </div>
             ))}
             <button type="button" className="btn btn-outline btn-sm" style={{ alignSelf: 'flex-start' }}
-                    onClick={() => setValues((p) => ({ ...p, lines: [...p.lines, newLine()] }))}>
+                    onClick={lines.add}>
               <Plus size={16} />Añadir ingrediente
             </button>
           </div>

@@ -3,9 +3,13 @@ import { Plus, Trash2 } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import { goodsReceipts, purchaseOrders } from '../api';
-import { asOptions, itemLabel, unitOptionsFor, useConfirm, useLookups } from '../lookups';
-import { formatDate, formatEUR, formatQty, isoDate, toNumber, useForm, useLoad } from '../support';
-import { DataTable, ErrorNotice, Field, FormGrid, Input, Notice, Page, Panel, Select, Sheet, Textarea } from '../ui';
+import { asOptions, itemLabel, unitOptionsFor, useLookups } from '../lookups';
+import { DataTable, ErrorNotice, Field, FormGrid, Input, Notice, Page, Panel, Select, Sheet, Textarea } from '../components';
+import { useConfirm } from '../../hooks/useConfirm';
+import { useForm } from '../../hooks/useForm';
+import { useLoad } from '../../hooks/useLoad';
+import { formatDate, formatEUR, formatQty, isoDate, toNumber } from '../../lib/format';
+import { useLines } from '../../hooks/useLines';
 
 const supplierName = (s) => s.tradeName || s.legalName;
 const newLine = () => ({ stockItemId: '', quantity: '', unit: '', unitPrice: '', lotCode: '', expiryDate: '' });
@@ -89,15 +93,11 @@ const ReceiptForm = ({ manager, onSaved }) => {
     }));
   };
 
-  const setLine = (index, field, value) => setValues((prev) => ({
-    ...prev,
-    lines: prev.lines.map((l, i) => {
-      if (i !== index) return l;
-      const next = { ...l, [field]: value };
-      if (field === 'stockItemId') next.unit = itemsById[value]?.purchaseUnit ?? '';
-      return next;
-    })
-  }));
+  const lines = useLines(form, 'lines', {
+    create: newLine,
+    // Al elegir artículo, su unidad de compra
+    derive: (line, field, value) => (field === 'stockItemId' ? { ...line, unit: itemsById[value]?.purchaseUnit ?? '' } : line)
+  });
 
   const submit = (e) => {
     e.preventDefault();
@@ -146,32 +146,32 @@ const ReceiptForm = ({ manager, onSaved }) => {
               return (
                 <div className="g-line" key={i}>
                   <Select label="Artículo" placeholder="Elige" value={line.stockItemId} options={asOptions(lookups.items, itemLabel)}
-                          onChange={(e) => setLine(i, 'stockItemId', e.target.value)} error={errors[`lines[${i}].stockItemId`]} />
+                          onChange={(e) => lines.update(i, 'stockItemId', e.target.value)} error={lines.error(i, 'stockItemId')} />
                   <Input label="Cantidad" type="number" min="0" step="any" value={line.quantity}
-                         onChange={(e) => setLine(i, 'quantity', e.target.value)} error={errors[`lines[${i}].quantity`]} />
+                         onChange={(e) => lines.update(i, 'quantity', e.target.value)} error={lines.error(i, 'quantity')} />
                   <Select label="Unidad" value={line.unit} options={unitOptionsFor(item)}
-                          onChange={(e) => setLine(i, 'unit', e.target.value)} error={errors[`lines[${i}].unit`]} />
+                          onChange={(e) => lines.update(i, 'unit', e.target.value)} error={lines.error(i, 'unit')} />
                   {manager && (
                     <Input label="Precio (vacío = tarifa)" type="number" min="0" step="any" value={line.unitPrice}
-                           onChange={(e) => setLine(i, 'unitPrice', e.target.value)} error={errors[`lines[${i}].unitPrice`]} />
+                           onChange={(e) => lines.update(i, 'unitPrice', e.target.value)} error={lines.error(i, 'unitPrice')} />
                   )}
                   {item?.perishable && (
                     <>
-                      <Input label="Lote" value={line.lotCode} onChange={(e) => setLine(i, 'lotCode', e.target.value)}
-                             error={errors[`lines[${i}].lotCode`]} />
+                      <Input label="Lote" value={line.lotCode} onChange={(e) => lines.update(i, 'lotCode', e.target.value)}
+                             error={lines.error(i, 'lotCode')} />
                       <Input label="Caducidad" type="date" value={line.expiryDate}
-                             onChange={(e) => setLine(i, 'expiryDate', e.target.value)} error={errors[`lines[${i}].expiryDate`]} />
+                             onChange={(e) => lines.update(i, 'expiryDate', e.target.value)} error={lines.error(i, 'expiryDate')} />
                     </>
                   )}
                   <button type="button" className="g-icon-btn" aria-label="Quitar línea"
-                          onClick={() => setValues((p) => ({ ...p, lines: p.lines.filter((_, j) => j !== i) }))}>
+                          onClick={() => lines.remove(i)}>
                     <Trash2 size={18} />
                   </button>
                 </div>
               );
             })}
             <button type="button" className="btn btn-outline btn-sm" style={{ alignSelf: 'flex-start' }}
-                    onClick={() => setValues((p) => ({ ...p, lines: [...p.lines, newLine()] }))}>
+                    onClick={lines.add}>
               <Plus size={16} />Añadir línea
             </button>
           </div>

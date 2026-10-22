@@ -3,11 +3,13 @@ import { Plus, Trash2 } from 'lucide-react';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import { inventory, purchaseOrders } from '../api';
 import { PURCHASE_ORDER_STATUS, PURCHASE_ORDER_TONES, toOptions } from '../labels';
-import { asOptions, itemLabel, unitOptionsFor, useConfirm, useLookups } from '../lookups';
-import { formatDate, formatEUR, formatQty, toNumber, useForm, useLoad } from '../support';
-import {
-  Badge, DataTable, ErrorNotice, Field, FormGrid, Input, Notice, Page, Panel, Select, Sheet, Tabs, Textarea, Toolbar
-} from '../ui';
+import { asOptions, itemLabel, unitOptionsFor, useLookups } from '../lookups';
+import { Badge, DataTable, ErrorNotice, Field, FormGrid, Input, Notice, Page, Panel, Select, Sheet, Tabs, Textarea, Toolbar } from '../components';
+import { useConfirm } from '../../hooks/useConfirm';
+import { useForm } from '../../hooks/useForm';
+import { useLoad } from '../../hooks/useLoad';
+import { formatDate, formatEUR, formatQty, toNumber } from '../../lib/format';
+import { useLines } from '../../hooks/useLines';
 
 const supplierName = (s) => s.tradeName || s.legalName;
 
@@ -73,18 +75,14 @@ const OrderForm = ({ order, lookups, onClose }) => {
       ? order.lines.map((l) => ({ stockItemId: l.stockItemId, quantity: l.quantity, unit: l.unit, unitPrice: l.unitPrice ?? '' }))
       : [newLine()]
   });
-  const { values: v, set, errors, setValues } = form;
+  const { values: v, set, errors } = form;
   const itemsById = Object.fromEntries(lookups.items.map((i) => [i.id, i]));
 
-  const setLine = (index, field, value) => setValues((prev) => ({
-    ...prev,
-    lines: prev.lines.map((l, i) => {
-      if (i !== index) return l;
-      const next = { ...l, [field]: value };
-      if (field === 'stockItemId') next.unit = itemsById[value]?.purchaseUnit ?? '';
-      return next;
-    })
-  }));
+  const lines = useLines(form, 'lines', {
+    create: newLine,
+    // Al elegir artículo, su unidad de compra
+    derive: (line, field, value) => (field === 'stockItemId' ? { ...line, unit: itemsById[value]?.purchaseUnit ?? '' } : line)
+  });
 
   const body = () => ({
     supplierId: toNumber(v.supplierId), expectedDate: v.expectedDate || null, notes: v.notes || null,
@@ -136,21 +134,21 @@ const OrderForm = ({ order, lookups, onClose }) => {
               <div className="g-line" key={i}>
                 <Select label="Artículo" placeholder="Elige" value={line.stockItemId}
                         options={asOptions(lookups.items, itemLabel)}
-                        onChange={(e) => setLine(i, 'stockItemId', e.target.value)} error={errors[`lines[${i}].stockItemId`]} />
+                        onChange={(e) => lines.update(i, 'stockItemId', e.target.value)} error={lines.error(i, 'stockItemId')} />
                 <Input label="Cantidad" type="number" min="0" step="any" value={line.quantity}
-                       onChange={(e) => setLine(i, 'quantity', e.target.value)} error={errors[`lines[${i}].quantity`]} />
+                       onChange={(e) => lines.update(i, 'quantity', e.target.value)} error={lines.error(i, 'quantity')} />
                 <Select label="Unidad" value={line.unit} options={unitOptionsFor(itemsById[line.stockItemId])}
-                        onChange={(e) => setLine(i, 'unit', e.target.value)} error={errors[`lines[${i}].unit`]} />
+                        onChange={(e) => lines.update(i, 'unit', e.target.value)} error={lines.error(i, 'unit')} />
                 <Input label="Precio (vacío = tarifa)" type="number" min="0" step="any" value={line.unitPrice}
-                       onChange={(e) => setLine(i, 'unitPrice', e.target.value)} error={errors[`lines[${i}].unitPrice`]} />
+                       onChange={(e) => lines.update(i, 'unitPrice', e.target.value)} error={lines.error(i, 'unitPrice')} />
                 <button type="button" className="g-icon-btn" aria-label="Quitar línea"
-                        onClick={() => setValues((p) => ({ ...p, lines: p.lines.filter((_, j) => j !== i) }))}>
+                        onClick={() => lines.remove(i)}>
                   <Trash2 size={18} />
                 </button>
               </div>
             ))}
             <button type="button" className="btn btn-outline btn-sm" style={{ alignSelf: 'flex-start' }}
-                    onClick={() => setValues((p) => ({ ...p, lines: [...p.lines, newLine()] }))}>
+                    onClick={lines.add}>
               <Plus size={16} />Añadir línea
             </button>
           </div>

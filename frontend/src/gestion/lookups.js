@@ -1,6 +1,6 @@
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { masterData, stockItems, suppliers, warehouses } from './api';
-import { useLoad } from './support';
+import { useLoad } from '../hooks/useLoad';
 
 // Catálogos que usan casi todas las pantallas de Gestión, cargados en paralelo. Los fallos de uno no
 // bloquean los demás: queda una lista vacía.
@@ -34,25 +34,3 @@ export const unitOptionsFor = (item) => {
   });
   return [...codes].filter(Boolean).map((code) => ({ value: code, label: code }));
 };
-
-/**
- * Confirmación previa a las acciones que mueven stock. Uso: const confirm = useConfirm();
- * confirm.ask({ title, message, onConfirm }) y <ConfirmModal {...confirm.props} />.
- */
-export function useConfirm() {
-  const [state, setState] = useState(null);
-  const close = useCallback(() => setState(null), []);
-  return {
-    ask: (options) => setState(options),
-    props: {
-      isOpen: !!state,
-      onClose: close,
-      title: state?.title,
-      message: state?.message,
-      type: state?.type ?? 'warning',
-      confirmText: state?.confirmText ?? 'Confirmar',
-      showCancel: true,
-      onConfirm: state?.onConfirm
-    }
-  };
-}
