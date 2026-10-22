@@ -14,33 +14,27 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import com.barandgo.crm.identity.User;
 import com.barandgo.crm.identity.UserRole;
 import com.barandgo.crm.identity.internal.TokenService;
 import com.barandgo.crm.identity.internal.UserRepository;
+import com.barandgo.crm.support.PostgresIntegrationTest;
 import com.jayway.jsonpath.JsonPath;
 
 /**
  * Compras de principio a fin contra PostgreSQL con el esquema de Flyway: categoría, proveedor,
  * artículo con conversión propia, tarifa, pedido y su ciclo de vida. Se omite sin Docker.
  */
-@SpringBootTest
-@AutoConfigureMockMvc
-@ActiveProfiles("test")
-@Testcontainers(disabledWithoutDocker = true)
+@PostgresIntegrationTest
 class PurchasingFlowTests {
 
     @Container

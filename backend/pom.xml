@@ -70,10 +70,11 @@
 			<artifactId>spring-modulith-starter-core</artifactId>
 		</dependency>
 
-		<!-- @ApplicationModuleListener: eventos entre módulos -->
+		<!-- Eventos entre módulos con registro persistente (outbox): un evento no procesado queda
+		     guardado y se reintenta al arrancar -->
 		<dependency>
 			<groupId>org.springframework.modulith</groupId>
-			<artifactId>spring-modulith-events-api</artifactId>
+			<artifactId>spring-modulith-starter-jdbc</artifactId>
 		</dependency>
 
 		<dependency>

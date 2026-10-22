@@ -19,31 +19,25 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import com.barandgo.crm.identity.UserRole;
 import com.barandgo.crm.identity.internal.TokenService;
 import com.barandgo.crm.identity.internal.UserRepository;
 import com.barandgo.crm.support.ErpTestApi;
+import com.barandgo.crm.support.PostgresIntegrationTest;
 import com.jayway.jsonpath.JsonPath;
 
 /**
  * Inventario de principio a fin contra PostgreSQL: recepción contra pedido, PMP, lotes, traspasos,
  * ajustes, recuento, reposición e inmutabilidad del ledger. Se omite sin Docker.
  */
-@SpringBootTest
-@AutoConfigureMockMvc
-@ActiveProfiles("test")
-@Testcontainers(disabledWithoutDocker = true)
+@PostgresIntegrationTest
 class InventoryFlowTests {
 
     @Container

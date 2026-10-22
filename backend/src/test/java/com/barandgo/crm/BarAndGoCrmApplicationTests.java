@@ -16,16 +16,12 @@ import java.time.LocalDateTime;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import com.barandgo.crm.catalog.Product;
@@ -36,6 +32,7 @@ import com.barandgo.crm.catalog.internal.ProductRepository;
 import com.barandgo.crm.identity.internal.UserRepository;
 import com.barandgo.crm.identity.internal.TokenService;
 import com.barandgo.crm.masterdata.VatRateService;
+import com.barandgo.crm.support.PostgresIntegrationTest;
 import com.jayway.jsonpath.JsonPath;
 
 /**
@@ -43,10 +40,7 @@ import com.jayway.jsonpath.JsonPath;
  * (Hibernate solo valida): registro, pedidos, roles de back-office y maestros de compras.
  * Se omite automáticamente si Docker no está disponible.
  */
-@SpringBootTest
-@AutoConfigureMockMvc
-@ActiveProfiles("test")
-@Testcontainers(disabledWithoutDocker = true)
+@PostgresIntegrationTest
 class BarAndGoCrmApplicationTests {
 
     @Container
