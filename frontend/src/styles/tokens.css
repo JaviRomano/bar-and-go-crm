@@ -1,0 +1,127 @@
+/* Bar&Go — design tokens v1
+ * Fuente de verdad del sistema visual. No usar hex fuera de este archivo.
+ * Tema: <html data-theme="light|dark">. Lo fija ThemeProvider (ver DESIGN.md §BLOQUE 1).
+ */
+
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* Superficies */
+  --bg: #F4F5F2;
+  --surface: #FFFFFF;
+  --surface-2: #ECEFEA;
+  --border: #DDE1DC;
+
+  /* Texto */
+  --text: #0F1B24;
+  --muted: #4A5560;
+
+  /* Marca */
+  --accent: #F2A93B;        /* ámbar: CTA principal, barras de datos, selección */
+  --accent-soft: #FDF0D9;   /* fondo de item activo / chips de zona cliente */
+  --accent-text: #8A5200;   /* ámbar como TEXTO sobre fondos claros (AA) */
+  --on-accent: #0F1B24;     /* texto sobre --accent */
+  --mark: #0F1B24;          /* fondo del símbolo */
+  --foam: #FFF4DA;          /* espuma del símbolo; solo marca */
+
+  /* Estados (comandas, alertas, deltas) */
+  --ok: #1C7A4A;      --ok-soft: #E3F3EA;
+  --warn: #8A5200;    --warn-soft: #FDF0D9;
+  --danger: #B42318;  --danger-soft: #FDE7E5;
+  --info: #1F5FA8;    --info-soft: #E4EEFA;
+
+  --focus-ring: 0 0 0 3px #1F5FA8;
+  --shadow-1: 0 1px 2px rgba(15, 27, 36, 0.06), 0 1px 3px rgba(15, 27, 36, 0.08);
+  --shadow-2: 0 8px 24px rgba(15, 27, 36, 0.12);
+  --scrim: rgba(15, 27, 36, 0.48);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #0B141B;
+  --surface: #13212C;
+  --surface-2: #1C2C38;
+  --border: #2A3B48;
+
+  --text: #F1F4F6;
+  --muted: #A9B6C0;
+
+  --accent: #F2A93B;
+  --accent-soft: #3A2C14;
+  --accent-text: #F2A93B;
+  --on-accent: #0F1B24;
+  --mark: #1C2C38;
+  --foam: #FFF4DA;
+
+  --ok: #4CC38A;      --ok-soft: #143326;
+  --warn: #F2A93B;    --warn-soft: #3A2C14;
+  --danger: #F97066;  --danger-soft: #3D1A18;
+  --info: #7CB4F0;    --info-soft: #16283D;
+
+  --focus-ring: 0 0 0 3px #7CB4F0;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --scrim: rgba(0, 0, 0, 0.6);
+}
+
+:root {
+  /* Tipografía */
+  --font-display: "Sora", system-ui, sans-serif;
+  --font-ui: "Inter", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --fs-display: 44px;  --lh-display: 1.1;  /* Sora 800, tracking -1px */
+  --fs-h1: 32px;       --lh-h1: 1.2;       /* Sora 700 */
+  --fs-h2: 24px;       --lh-h2: 1.25;      /* Sora 700 */
+  --fs-h3: 18px;       --lh-h3: 1.35;      /* Inter 600 */
+  --fs-body: 16px;     --lh-body: 1.5;     /* Inter 400 */
+  --fs-sm: 14px;       --lh-sm: 1.45;
+  --fs-xs: 12px;       --lh-xs: 1.35;      /* etiquetas: 600, uppercase, tracking 1px */
+  --fs-kpi: 30px;                           /* Sora 700, tabular-nums */
+
+  /* Espaciado (base 4) */
+  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-12: 48px; --sp-16: 64px;
+
+  /* Radios */
+  --r-sm: 8px;    /* controles */
+  --r-md: 12px;   /* tarjetas */
+  --r-lg: 16px;   /* paneles */
+  --r-full: 999px;
+
+  /* Táctil */
+  --touch-min: 44px;   /* cualquier control */
+  --touch-pos: 56px;   /* acciones primarias de TPV / comandas */
+
+  /* Layout */
+  --sidebar-w: 248px;
+  --rail-w: 80px;
+  --ticket-w: 340px;
+  --content-max: 1440px;
+
+  --z-sticky: 10; --z-nav: 20; --z-sheet: 30; --z-modal: 40; --z-toast: 50;
+
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --dur-fast: 120ms; --dur: 200ms;
+}
+
+/* Breakpoints (usar en media queries; CSS custom properties no valen en @media):
+ * móvil   < 640px
+ * tablet  640px – 1023px
+ * PC      >= 1024px
+ */
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur-fast: 0ms; --dur: 0ms; }
+}
+
+/* Añadido en la Fase 6 (pendiente de validar con diseño): texto y estados sobre --mark, que es oscuro
+ * en los dos temas. Valores tomados del logotipo (blanco y #C9D2D9 sobre tinta). */
+:root {
+  --on-mark: #FFFFFF;
+  --on-mark-muted: #C9D2D9;
+  --on-mark-hover: rgba(255, 255, 255, 0.08);
+  --on-mark-border: rgba(255, 255, 255, 0.12);
+}

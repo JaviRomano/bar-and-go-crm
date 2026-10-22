@@ -1,0 +1,224 @@
+/* Barra superior y menú lateral, sobre los tokens. */
+
+.nb-top {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-nav);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding: var(--sp-2) var(--sp-4);
+  background: var(--mark);
+  color: var(--on-mark);
+  box-shadow: var(--shadow-1);
+}
+
+.nb-menu-btn,
+.nb-icon-btn {
+  min-height: var(--touch-min);
+  min-width: var(--touch-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  padding: 0 var(--sp-2);
+  border: none;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: inherit;
+  font: 500 var(--fs-body) var(--font-ui);
+  cursor: pointer;
+}
+
+.nb-menu-btn:hover,
+.nb-icon-btn:hover {
+  background: var(--on-mark-hover);
+}
+
+.nb-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-3);
+  color: inherit;
+  text-decoration: none;
+}
+
+.nb-wordmark {
+  font: 800 22px / 1 var(--font-display);
+  letter-spacing: -0.5px;
+}
+
+.nb-amp {
+  color: var(--accent);
+}
+
+.nb-tagline {
+  margin-top: var(--sp-1);
+  font-size: var(--fs-xs);
+  color: var(--on-mark-muted);
+}
+
+.nb-user {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.nb-user__name {
+  font-size: var(--fs-sm);
+}
+
+.nb-role {
+  padding: 2px var(--sp-3);
+  border-radius: var(--r-full);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+
+.nb-role--customer {
+  background: var(--foam);
+}
+
+.nb-scrim {
+  position: fixed;
+  inset: 0;
+  background: var(--scrim);
+  z-index: var(--z-modal);
+  animation: fadeIn var(--dur) var(--ease);
+}
+
+.nb-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: min(85vw, var(--sidebar-w));
+  height: 100vh;
+  z-index: calc(var(--z-modal) + 1);
+  display: flex;
+  flex-direction: column;
+  background: var(--mark);
+  color: var(--on-mark);
+  box-shadow: var(--shadow-2);
+  transform: translateX(-100%);
+  transition: transform var(--dur) var(--ease);
+  visibility: hidden;
+}
+
+.nb-sidebar--open {
+  transform: translateX(0);
+  visibility: visible;
+}
+
+.nb-sidebar__header,
+.nb-profile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  border-bottom: 1px solid var(--on-mark-border);
+}
+
+.nb-profile {
+  justify-content: flex-start;
+}
+
+.nb-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  color: var(--on-accent);
+  font: 700 var(--fs-h3) var(--font-display);
+}
+
+.nb-profile__name {
+  font-weight: 600;
+}
+
+.nb-profile__email {
+  font-size: var(--fs-xs);
+  color: var(--on-mark-muted);
+}
+
+.nb-links {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--sp-2) 0;
+}
+
+.nb-section + .nb-section {
+  margin-top: var(--sp-3);
+}
+
+.nb-section__title {
+  padding: var(--sp-2) var(--sp-4);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--on-mark-muted);
+}
+
+.nb-link {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: var(--touch-min);
+  padding: 0 var(--sp-4);
+  border-left: 3px solid transparent;
+  color: var(--on-mark);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.nb-link:hover {
+  background: var(--on-mark-hover);
+}
+
+.nb-link--active {
+  border-left-color: var(--accent);
+  background: var(--on-mark-hover);
+}
+
+.nb-footer {
+  padding: var(--sp-4);
+  border-top: 1px solid var(--on-mark-border);
+}
+
+.nb-logout {
+  width: 100%;
+  min-height: var(--touch-min);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  border: 1px solid var(--on-mark-border);
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--on-mark);
+  font: 500 var(--fs-sm) var(--font-ui);
+  cursor: pointer;
+}
+
+.nb-logout:hover {
+  background: var(--on-mark-hover);
+}
+
+@media (max-width: 639px) {
+  .nb-menu-btn span,
+  .nb-user__name {
+    display: none;
+  }
+
+  .nb-wordmark {
+    font-size: 18px;
+  }
+}

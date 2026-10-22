@@ -1,165 +1,103 @@
-import { CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { useEffect } from 'react';
+import { CheckCircle, XCircle, AlertCircle, Info } from 'lucide-react';
 
-const ConfirmModal = ({ 
-  isOpen, 
-  onClose, 
-  title, 
-  message, 
-  type = 'success', // 'success', 'error', 'warning'
+const TONES = {
+  success: { icon: CheckCircle, fg: 'var(--ok)', bg: 'var(--ok-soft)' },
+  error: { icon: XCircle, fg: 'var(--danger)', bg: 'var(--danger-soft)' },
+  warning: { icon: AlertCircle, fg: 'var(--warn)', bg: 'var(--warn-soft)' },
+  info: { icon: Info, fg: 'var(--info)', bg: 'var(--info-soft)' }
+};
+
+const ConfirmModal = ({
+  isOpen,
+  onClose,
+  title,
+  message,
+  type = 'success', // 'success', 'error', 'warning', 'info'
   confirmText = 'Aceptar',
   showCancel = false,
   cancelText = 'Cancelar',
   onConfirm
 }) => {
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const onKey = (e) => e.key === 'Escape' && onClose();
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
-  
-  const getIcon = () => {
-    switch (type) {
-      case 'success':
-        return <CheckCircle size={64} color="#10b981" />;
-      case 'error':
-        return <XCircle size={64} color="#ef4444" />;
-      case 'warning':
-        return <AlertCircle size={64} color="#f59e0b" />;
-      default:
-        return <CheckCircle size={64} color="#2563eb" />;
-    }
-  };
-  
-  const getBackgroundColor = () => {
-    switch (type) {
-      case 'success':
-        return '#d1fae5';
-      case 'error':
-        return '#fee2e2';
-      case 'warning':
-        return '#fef3c7';
-      default:
-        return '#dbeafe';
-    }
-  };
-  
-  const getBorderColor = () => {
-    switch (type) {
-      case 'success':
-        return '#10b981';
-      case 'error':
-        return '#ef4444';
-      case 'warning':
-        return '#f59e0b';
-      default:
-        return '#2563eb';
-    }
-  };
-  
+
+  const tone = TONES[type] ?? TONES.info;
+  const Icon = tone.icon;
+
   const handleConfirm = () => {
     if (onConfirm) {
       onConfirm();
     }
     onClose();
   };
-  
+
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0,0,0,0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 9999,
-      padding: '1rem',
-      animation: 'fadeIn 0.2s ease-in-out'
-    }}>
-      <div 
-        className="card"
-        style={{ 
-          maxWidth: '500px',
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'var(--scrim)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 'var(--z-modal)',
+        padding: 'var(--sp-4)',
+        animation: 'fadeIn var(--dur) var(--ease)'
+      }}
+    >
+      <div
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="confirm-modal-title"
+        style={{
+          maxWidth: '480px',
           width: '100%',
-          textAlign: 'center',
-          animation: 'slideUp 0.3s ease-out'
+          background: 'var(--surface)',
+          borderRadius: 'var(--r-lg)',
+          boxShadow: 'var(--shadow-2)',
+          padding: 'var(--sp-6)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 'var(--sp-4)'
         }}
       >
-        {/* Icon */}
-        <div style={{ marginBottom: '1.5rem' }}>
-          {getIcon()}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-3)' }}>
+          <span
+            style={{
+              display: 'inline-flex',
+              padding: 'var(--sp-2)',
+              borderRadius: 'var(--r-full)',
+              background: tone.bg,
+              color: tone.fg
+            }}
+          >
+            <Icon size={24} aria-hidden="true" />
+          </span>
+          <h2 id="confirm-modal-title" style={{ fontSize: 'var(--fs-h3)', lineHeight: 'var(--lh-h3)' }}>
+            {title}
+          </h2>
         </div>
-        
-        {/* Title */}
-        <h2 style={{ 
-          fontSize: '1.5rem',
-          fontWeight: 'bold',
-          marginBottom: '1rem',
-          color: 'var(--text-primary)'
-        }}>
-          {title}
-        </h2>
-        
-        {/* Message */}
-        <div 
-          className="card"
-          style={{
-            backgroundColor: getBackgroundColor(),
-            border: `2px solid ${getBorderColor()}`,
-            marginBottom: '2rem',
-            padding: '1rem'
-          }}
-        >
-          <p style={{ 
-            fontSize: '1rem',
-            color: 'var(--text-primary)',
-            lineHeight: '1.6',
-            whiteSpace: 'pre-line'
-          }}>
-            {message}
-          </p>
-        </div>
-        
-        {/* Buttons */}
-        <div style={{
-          display: 'flex',
-          gap: '1rem',
-          justifyContent: 'center'
-        }}>
+
+        <p style={{ color: 'var(--muted)', whiteSpace: 'pre-line' }}>{message}</p>
+
+        <div style={{ display: 'flex', gap: 'var(--sp-3)', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
           {showCancel && (
-            <button
-              onClick={onClose}
-              className="btn btn-outline"
-              style={{ minWidth: '120px' }}
-            >
+            <button type="button" onClick={onClose} className="btn btn-outline">
               {cancelText}
             </button>
           )}
-          <button
-            onClick={handleConfirm}
-            className="btn btn-primary"
-            style={{ minWidth: '120px' }}
-          >
+          <button type="button" onClick={handleConfirm} className="btn btn-primary" autoFocus>
             {confirmText}
           </button>
         </div>
       </div>
-      
-      <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        
-        @keyframes slideUp {
-          from { 
-            opacity: 0;
-            transform: translateY(20px); 
-          }
-          to { 
-            opacity: 1;
-            transform: translateY(0); 
-          }
-        }
-      `}</style>
     </div>
   );
 };

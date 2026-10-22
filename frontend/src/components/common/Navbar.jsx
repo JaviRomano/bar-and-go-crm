@@ -1,341 +1,148 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
 import { USER_ROLE_LABELS, homePathFor } from '../../utils/constants';
-import { 
-  LogOut, 
-  User, 
-  ShoppingCart, 
-  Calendar, 
+import {
+  LogOut,
+  ShoppingCart,
+  Calendar,
   LayoutDashboard,
   UtensilsCrossed,
   Package,
   Menu,
-  X
+  X,
+  Truck,
+  Boxes,
+  ClipboardList,
+  PackageCheck,
+  Warehouse,
+  ListChecks,
+  ChefHat,
+  Trash2,
+  BarChart3
 } from 'lucide-react';
+import BrandMark from './BrandMark';
+import './Navbar.css';
 
 const Navbar = () => {
   const { user, logout, isBackOffice, canManage } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  
+
+  if (!user) return null;
+
+  const backOffice = isBackOffice();
+  const manager = canManage();
+  const closeSidebar = () => setSidebarOpen(false);
+
   const handleLogout = () => {
+    closeSidebar();
     logout();
     navigate('/login');
   };
-  
-  const closeSidebar = () => {
-    setSidebarOpen(false);
-  };
-  
-  if (!user) return null;
-  
-  const backOffice = isBackOffice();
-  const accentColor = backOffice ? '#ef4444' : '#10b981';
 
-  // Menú según rol: la carta solo la mantienen admin y encargado
-  const menuItems = backOffice ? [
-    { path: '/admin', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
-    ...(canManage() ? [{ path: '/admin/products', icon: <Package size={20} />, label: 'Productos' }] : []),
-    { path: '/admin/reservations', icon: <Calendar size={20} />, label: 'Reservas' },
-    { path: '/admin/orders', icon: <ShoppingCart size={20} />, label: 'Pedidos' }
+  // Menú según rol: la carta, las compras y los informes son de admin y encargado
+  const sections = backOffice ? [
+    {
+      title: 'Sala',
+      items: [
+        { path: '/admin', icon: LayoutDashboard, label: 'Dashboard', end: true },
+        ...(manager ? [{ path: '/admin/products', icon: Package, label: 'Productos' }] : []),
+        { path: '/admin/reservations', icon: Calendar, label: 'Reservas' },
+        { path: '/admin/orders', icon: ShoppingCart, label: 'Pedidos' }
+      ]
+    },
+    {
+      title: 'Gestión',
+      items: [
+        ...(manager ? [{ path: '/admin/gestion/proveedores', icon: Truck, label: 'Proveedores' }] : []),
+        { path: '/admin/gestion/articulos', icon: Boxes, label: 'Artículos' },
+        ...(manager ? [{ path: '/admin/gestion/compras', icon: ClipboardList, label: 'Compras' }] : []),
+        { path: '/admin/gestion/recepcion', icon: PackageCheck, label: 'Recepción' },
+        { path: '/admin/gestion/inventario', icon: Warehouse, label: 'Inventario' },
+        { path: '/admin/gestion/recuentos', icon: ListChecks, label: 'Recuentos' },
+        { path: '/admin/gestion/escandallos', icon: ChefHat, label: 'Escandallos' },
+        { path: '/admin/gestion/mermas', icon: Trash2, label: 'Mermas' },
+        ...(manager ? [{ path: '/admin/gestion/informes', icon: BarChart3, label: 'Informes' }] : [])
+      ]
+    }
   ] : [
-    { path: '/cliente', icon: <UtensilsCrossed size={20} />, label: 'Menú' },
-    { path: '/cliente/reservations/new', icon: <Calendar size={20} />, label: 'Reservar' },
-    { path: '/cliente/reservations', icon: <Calendar size={20} />, label: 'Mis Reservas' },
-    { path: '/cliente/orders', icon: <ShoppingCart size={20} />, label: 'Mis Pedidos' }
+    {
+      title: null,
+      items: [
+        { path: '/cliente', icon: UtensilsCrossed, label: 'Menú', end: true },
+        { path: '/cliente/reservations/new', icon: Calendar, label: 'Reservar' },
+        { path: '/cliente/reservations', icon: Calendar, label: 'Mis Reservas', end: true },
+        { path: '/cliente/orders', icon: ShoppingCart, label: 'Mis Pedidos' }
+      ]
+    }
   ];
-  
+
   return (
     <>
-      {/* Top Bar */}
-      <nav style={{
-        backgroundColor: 'var(--dark-bg)',
-        color: 'white',
-        padding: '1rem 0',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-        position: 'sticky',
-        top: 0,
-        zIndex: 100
-      }}>
-        <div className="container" style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-          {/* Hamburger Button */}
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'white',
-              cursor: 'pointer',
-              padding: '0.5rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              fontSize: '1rem'
-            }}
-          >
-            <Menu size={24} />
-            <span style={{ fontWeight: '500' }}>Menú</span>
-          </button>
-          
-          {/* Logo */}
-          <Link 
-            to={homePathFor(user.role)} 
-            style={{ 
-              textDecoration: 'none', 
-              color: 'white',
-              fontSize: '1.5rem',
-              fontWeight: 'bold',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}
-          >
-            <UtensilsCrossed size={28} />
-            Bar&Go
-          </Link>
-          
-          {/* User Info */}
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '0.5rem' 
-          }}>
-            <User size={20} />
-            <span style={{ 
-              fontSize: '0.875rem',
-              display: 'none' 
-            }} className="user-name-desktop">
-              {user.name}
-            </span>
-            <span style={{ 
-              padding: '0.125rem 0.5rem',
-              backgroundColor: accentColor,
-              borderRadius: '9999px',
-              fontSize: '0.75rem',
-              fontWeight: 'bold'
-            }}>
-              {USER_ROLE_LABELS[user.role] ?? user.role}
-            </span>
-          </div>
+      <nav className="nb-top">
+        <button type="button" className="nb-menu-btn" onClick={() => setSidebarOpen(true)} aria-label="Abrir menú">
+          <Menu size={24} />
+          <span>Menú</span>
+        </button>
+
+        <Link to={homePathFor(user.role)} className="nb-brand">
+          <BrandMark size={32} />
+          <span className="nb-wordmark">Bar<span className="nb-amp">&amp;</span>Go</span>
+        </Link>
+
+        <div className="nb-user">
+          <span className="nb-user__name">{user.name}</span>
+          <span className={`nb-role${backOffice ? '' : ' nb-role--customer'}`}>{USER_ROLE_LABELS[user.role] ?? user.role}</span>
         </div>
       </nav>
-      
-      {/* Overlay */}
-      {sidebarOpen && (
-        <div
-          onClick={closeSidebar}
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            zIndex: 998,
-            animation: 'fadeIn 0.2s ease-in-out'
-          }}
-        />
-      )}
-      
-      {/* Sidebar */}
-      <aside style={{
-        position: 'fixed',
-        top: 0,
-        left: sidebarOpen ? 0 : '-280px',
-        width: '280px',
-        height: '100vh',
-        backgroundColor: 'var(--dark-bg)',
-        color: 'white',
-        zIndex: 999,
-        transition: 'left 0.3s ease-in-out',
-        display: 'flex',
-        flexDirection: 'column',
-        boxShadow: '2px 0 8px rgba(0,0,0,0.3)'
-      }}>
-        {/* Sidebar Header */}
-        <div style={{
-          padding: '1.5rem',
-          borderBottom: '1px solid rgba(255,255,255,0.1)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem'
-          }}>
-            <UtensilsCrossed size={32} />
+
+      {sidebarOpen && <div className="nb-scrim" onClick={closeSidebar} />}
+
+      <aside className={`nb-sidebar${sidebarOpen ? ' nb-sidebar--open' : ''}`} aria-hidden={!sidebarOpen}>
+        <div className="nb-sidebar__header">
+          <div className="nb-brand">
+            <BrandMark size={40} />
             <div>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>Bar&Go</h2>
-              <p style={{ fontSize: '0.75rem', opacity: 0.7 }}>
-                {backOffice ? 'Panel de gestión' : 'Portal Cliente'}
-              </p>
+              <div className="nb-wordmark">Bar<span className="nb-amp">&amp;</span>Go</div>
+              <div className="nb-tagline">{backOffice ? 'Panel de gestión' : 'Portal cliente'}</div>
             </div>
           </div>
-          
-          <button
-            onClick={closeSidebar}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'white',
-              cursor: 'pointer',
-              padding: '0.5rem'
-            }}
-          >
-            <X size={24} />
+          <button type="button" className="nb-icon-btn" onClick={closeSidebar} aria-label="Cerrar menú">
+            <X size={22} />
           </button>
         </div>
-        
-        {/* User Info */}
-        <div style={{
-          padding: '1.5rem',
-          borderBottom: '1px solid rgba(255,255,255,0.1)',
-          backgroundColor: 'rgba(255,255,255,0.05)'
-        }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem'
-          }}>
-            <div style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: '50%',
-              backgroundColor: accentColor,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '1.5rem',
-              fontWeight: 'bold'
-            }}>
-              {user.name.charAt(0).toUpperCase()}
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 'bold', fontSize: '1rem' }}>
-                {user.name}
-              </div>
-              <div style={{ fontSize: '0.875rem', opacity: 0.7 }}>
-                {user.email}
-              </div>
-            </div>
+
+        <div className="nb-profile">
+          <div className="nb-avatar">{user.name.charAt(0).toUpperCase()}</div>
+          <div>
+            <div className="nb-profile__name">{user.name}</div>
+            <div className="nb-profile__email">{user.email}</div>
           </div>
         </div>
-        
-        {/* Navigation Links */}
-        <nav style={{
-          flex: 1,
-          padding: '1rem 0',
-          overflowY: 'auto'
-        }}>
-          {menuItems.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              onClick={closeSidebar}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                padding: '0.875rem 1.5rem',
-                color: 'white',
-                textDecoration: 'none',
-                transition: 'all 0.2s',
-                borderLeft: '3px solid transparent'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)';
-                e.currentTarget.style.borderLeftColor = accentColor;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.borderLeftColor = 'transparent';
-              }}
-            >
-              {item.icon}
-              <span style={{ fontSize: '0.95rem', fontWeight: '500' }}>
-                {item.label}
-              </span>
-            </Link>
+
+        <nav className="nb-links">
+          {sections.map((section) => (
+            <div key={section.title ?? 'main'} className="nb-section">
+              {section.title && <div className="nb-section__title">{section.title}</div>}
+              {section.items.map((item) => (
+                <NavLink key={item.path} to={item.path} end={item.end} onClick={closeSidebar}
+                         className={({ isActive }) => `nb-link${isActive ? ' nb-link--active' : ''}`}>
+                  <item.icon size={20} aria-hidden="true" />
+                  <span>{item.label}</span>
+                </NavLink>
+              ))}
+            </div>
           ))}
         </nav>
-        
-        {/* Logout Button */}
-        <div style={{
-          padding: '1rem',
-          borderTop: '1px solid rgba(255,255,255,0.1)'
-        }}>
-          <button
-            onClick={() => {
-              closeSidebar();
-              handleLogout();
-            }}
-            style={{
-              width: '100%',
-              padding: '0.875rem',
-              background: 'rgba(239, 68, 68, 0.2)',
-              border: '1px solid #ef4444',
-              color: 'white',
-              borderRadius: '0.5rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.5rem',
-              fontSize: '0.95rem',
-              fontWeight: '500',
-              transition: 'all 0.2s'
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.backgroundColor = '#ef4444';
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
-            }}
-          >
+
+        <div className="nb-footer">
+          <button type="button" className="nb-logout" onClick={handleLogout}>
             <LogOut size={20} />
-            Cerrar Sesión
+            Cerrar sesión
           </button>
         </div>
       </aside>
-      
-      {/* CSS para animaciones */}
-      <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        
-        @media (min-width: 768px) {
-          .user-name-desktop {
-            display: inline !important;
-          }
-        }
-        
-        /* Scrollbar personalizado para sidebar */
-        aside nav::-webkit-scrollbar {
-          width: 6px;
-        }
-        
-        aside nav::-webkit-scrollbar-track {
-          background: rgba(255,255,255,0.05);
-        }
-        
-        aside nav::-webkit-scrollbar-thumb {
-          background: rgba(255,255,255,0.2);
-          border-radius: 3px;
-        }
-        
-        aside nav::-webkit-scrollbar-thumb:hover {
-          background: rgba(255,255,255,0.3);
-        }
-      `}</style>
     </>
   );
 };

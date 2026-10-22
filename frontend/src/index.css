@@ -1,14 +1,18 @@
+/* Estilos base sobre los tokens de styles/tokens.css. Sin colores sueltos: todo sale de un token. */
+
+/* Alias de las variables anteriores a los tokens, que siguen usando los estilos en línea de las
+ * pantallas de pedidos, reservas y carta. */
 :root {
-  --primary-color: #2563eb;
-  --primary-dark: #1e40af;
-  --secondary-color: #10b981;
-  --danger-color: #ef4444;
-  --warning-color: #f59e0b;
-  --dark-bg: #1f2937;
-  --light-bg: #f9fafb;
-  --border-color: #e5e7eb;
-  --text-primary: #111827;
-  --text-secondary: #6b7280;
+  --primary-color: var(--accent-text);
+  --primary-dark: var(--text);
+  --secondary-color: var(--ok);
+  --danger-color: var(--danger);
+  --warning-color: var(--warn);
+  --dark-bg: var(--mark);
+  --light-bg: var(--bg);
+  --border-color: var(--border);
+  --text-primary: var(--text);
+  --text-secondary: var(--muted);
 }
 
 * {
@@ -18,53 +22,69 @@
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-  line-height: 1.6;
-  color: var(--text-primary);
-  background-color: var(--light-bg);
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--text);
+  background-color: var(--bg);
+  overflow-x: hidden;
+}
+
+h1, h2 {
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
+h3 {
+  font-size: var(--fs-h3);
+  line-height: var(--lh-h3);
+  font-weight: 600;
 }
 
 /* Utilities */
 .container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 1rem;
+  padding: 0 var(--sp-4);
 }
 
 .btn {
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 0.5rem;
-  font-size: 1rem;
-  font-weight: 500;
+  min-height: var(--touch-min);
+  padding: var(--sp-3) var(--sp-5);
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  font: 600 var(--fs-sm) / 1 var(--font-ui);
   cursor: pointer;
-  transition: all 0.2s;
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: center;
+  gap: var(--sp-2);
+  transition: background-color var(--dur) var(--ease), border-color var(--dur) var(--ease),
+    color var(--dur) var(--ease);
 }
 
 .btn-primary {
-  background-color: var(--primary-color);
-  color: white;
+  background-color: var(--accent);
+  color: var(--on-accent);
 }
 
 .btn-primary:hover {
-  background-color: var(--primary-dark);
+  background-color: var(--accent-text);
+  color: var(--surface);
 }
 
 .btn-secondary {
-  background-color: var(--secondary-color);
-  color: white;
+  background-color: var(--mark);
+  color: var(--foam);
 }
 
 .btn-secondary:hover {
-  opacity: 0.9;
+  background-color: var(--text);
 }
 
 .btn-danger {
-  background-color: var(--danger-color);
-  color: white;
+  background-color: var(--danger);
+  color: var(--surface);
 }
 
 .btn-danger:hover {
@@ -73,72 +93,68 @@ body {
 
 .btn-outline {
   background-color: transparent;
-  border: 2px solid var(--primary-color);
-  color: var(--primary-color);
+  border-color: var(--border);
+  color: var(--text);
 }
 
 .btn-outline:hover {
-  background-color: var(--primary-color);
-  color: white;
+  background-color: var(--surface-2);
 }
 
 .card {
-  background: white;
-  border-radius: 0.75rem;
-  padding: 1.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: var(--sp-6);
+  box-shadow: var(--shadow-1);
 }
 
 .input-group {
-  margin-bottom: 1rem;
+  margin-bottom: var(--sp-4);
 }
 
 .input-group label {
   display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-  color: var(--text-primary);
+  margin-bottom: var(--sp-2);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text);
 }
 
 .input-group input,
 .input-group select,
 .input-group textarea {
   width: 100%;
-  padding: 0.75rem;
-  border: 1px solid var(--border-color);
-  border-radius: 0.5rem;
-  font-size: 1rem;
-  transition: border-color 0.2s;
-}
-
-.input-group input:focus,
-.input-group select:focus,
-.input-group textarea:focus {
-  outline: none;
-  border-color: var(--primary-color);
+  min-height: var(--touch-min);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
 }
 
 .error-message {
-  color: var(--danger-color);
-  font-size: 0.875rem;
-  margin-top: 0.25rem;
+  color: var(--danger);
+  font-size: var(--fs-sm);
+  margin-top: var(--sp-1);
 }
 
 .success-message {
-  color: var(--secondary-color);
-  font-size: 0.875rem;
-  margin-top: 0.25rem;
+  color: var(--ok);
+  font-size: var(--fs-sm);
+  margin-top: var(--sp-1);
 }
 
 /* Loading Spinner */
 .spinner {
-  border: 3px solid var(--border-color);
-  border-top: 3px solid var(--primary-color);
+  border: 3px solid var(--border);
+  border-top: 3px solid var(--accent);
   border-radius: 50%;
   width: 40px;
   height: 40px;
   animation: spin 1s linear infinite;
-  margin: 2rem auto;
+  margin: var(--sp-8) auto;
 }
 
 @keyframes spin {
@@ -149,7 +165,7 @@ body {
 /* Grid */
 .grid {
   display: grid;
-  gap: 1.5rem;
+  gap: var(--sp-6);
 }
 
 .grid-2 {
@@ -164,11 +180,15 @@ body {
   grid-template-columns: repeat(4, 1fr);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .grid-2,
   .grid-3,
   .grid-4 {
     grid-template-columns: 1fr;
+  }
+
+  .container {
+    padding: 0 var(--sp-3);
   }
 
   .desktop-only {
@@ -176,7 +196,7 @@ body {
   }
 
   main {
-    padding: 1cm;
+    padding: var(--sp-4);
   }
 
   main:has(.login-page) {
@@ -184,7 +204,7 @@ body {
   }
 }
 
-@media (min-width: 769px) {
+@media (min-width: 768px) {
   .mobile-only {
     display: none !important;
   }
@@ -194,101 +214,71 @@ body {
 table {
   width: 100%;
   border-collapse: collapse;
-  background: white;
-  border-radius: 0.5rem;
+  background: var(--surface);
+  border-radius: var(--r-sm);
   overflow: hidden;
 }
 
 table thead {
-  background-color: var(--dark-bg);
-  color: white;
+  background-color: var(--surface-2);
+  color: var(--text);
+}
+
+table th {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 table th,
 table td {
-  padding: 1rem;
+  padding: var(--sp-3) var(--sp-4);
   text-align: left;
 }
 
 table tbody tr {
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border);
 }
 
 table tbody tr:hover {
-  background-color: var(--light-bg);
+  background-color: var(--bg);
 }
 
 /* Badge */
 .badge {
   display: inline-block;
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  font-size: 0.875rem;
+  padding: 2px var(--sp-3);
+  border-radius: var(--r-full);
+  font-size: var(--fs-xs);
   font-weight: 600;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
 }
 
 .badge-success {
-  background-color: #d1fae5;
-  color: #065f46;
+  background-color: var(--ok-soft);
+  color: var(--ok);
 }
 
 .badge-warning {
-  background-color: #fef3c7;
-  color: #92400e;
+  background-color: var(--warn-soft);
+  color: var(--warn);
 }
 
 .badge-danger {
-  background-color: #fee2e2;
-  color: #991b1b;
+  background-color: var(--danger-soft);
+  color: var(--danger);
 }
 
 .badge-info {
-  background-color: #dbeafe;
-  color: #1e40af;
+  background-color: var(--info-soft);
+  color: var(--info);
 }
 
-/* Mejoras para el sidebar */
-@media (max-width: 768px) {
-  .container {
-    padding: 0 0.75rem;
-  }
-  
-  .grid-2,
-  .grid-3,
-  .grid-4 {
-    grid-template-columns: 1fr !important;
-  }
-}
-
-/* Smooth transitions */
-* {
-  transition: background-color 0.2s ease;
-}
-
-/* Evitar scroll horizontal */
-body {
-  overflow-x: hidden;
-}
-
-/* Mejorar contraste en cards */
-.card {
-  background: white;
-  border: 1px solid var(--border-color);
-}
-
-/* Hover effects más suaves */
-.btn {
-  transform: translateY(0);
-  transition: all 0.2s ease;
-}
-
-.btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-}
-
-.btn:active {
-  transform: translateY(0);
+.badge-neutral {
+  background-color: var(--surface-2);
+  color: var(--muted);
 }
 
 /* Animación para el overlay del sidebar */
@@ -301,26 +291,18 @@ body {
   }
 }
 
-/* Mejoras de accesibilidad */
-button:focus,
-a:focus,
-input:focus,
-select:focus,
-textarea:focus {
-  outline: 2px solid var(--primary-color);
-  outline-offset: 2px;
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-/* Loading states */
+/* Foco visible solo con teclado */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
 button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-}
-
-/* Mejora visual para badges */
-.badge {
-  font-weight: 600;
-  letter-spacing: 0.025em;
-  text-transform: uppercase;
-  font-size: 0.75rem;
 }
