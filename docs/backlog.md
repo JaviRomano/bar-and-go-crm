@@ -43,3 +43,13 @@ Puntos detectados fuera del alcance de la fase en curso. Se priorizan cuando se 
 - **Alerta de stock negativo** (D11): las ventas pueden dejar stock negativo y hoy solo se ve en la consulta de stock. Encaja en el panel de la Fase 6.
 - **Eventos fallidos sin pantalla**: si un descuento de stock falla (por ejemplo, sin almacén de ventas), el evento queda pendiente y se reintenta al reiniciar. No hay vista ni reintento manual desde el panel.
 - **Consumo entre recuentos**: solo cuentan los artículos contados en los dos recuentos, y el periodo va de cierre a cierre. Un recuento hecho con el almacén en marcha (ver Fase 3) desplaza los movimientos entre el conteo y el cierre.
+
+## Detectado en la Fase 6
+
+- **Tema oscuro**: `tokens.css` define `[data-theme="dark"]` y remite a un `ThemeProvider` descrito en un DESIGN.md (§BLOQUE 1) que no está en el repo. Sin él, la aplicación usa siempre el tema claro.
+- **Pantallas anteriores al sistema de diseño** (carta, checkout, reservas, panel de pedidos): heredan los tokens a través de alias en `index.css`, pero mantienen estilos en línea y algún color fijo. Migrarlas a los componentes de Gestión.
+- **Recepción contra pedido para el personal**: la matriz de permisos solo deja ver pedidos a proveedor al encargado, así que el personal registra el albarán línea a línea.
+- **Coste de la ingeniería de menú**: usa el coste actual del escandallo (reposición), no el del momento de cada venta.
+- **Food cost por almacén**: el filtro de almacén afecta al coste, no a las ventas, que no tienen almacén asociado.
+- **Versión en los DTOs** sigue pendiente (Fase 1): las pantallas de Gestión no envían la versión que leyeron, así que dos personas editando la misma ficha pueden pisarse.
+- **Tests de frontend**: siguen sin existir; las pantallas de Gestión se han comprobado contra la API, no con tests automatizados.

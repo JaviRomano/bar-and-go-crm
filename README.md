@@ -33,14 +33,15 @@ El backend es un monolito modular ([Spring Modulith](https://spring.io/projects/
 | `inventory` | Almacenes, movimientos de stock (inmutables), PMP, lotes, recepción de albaranes, recuentos, reposición | shared, identity, masterdata, purchasing |
 | `recipes` | Escandallos, sub-escandallos, food cost, alérgenos de cada plato, producción de elaboraciones | shared, identity, masterdata, purchasing, catalog, inventory |
 | `costcontrol` | Descuento de stock por venta (escucha los eventos de pedidos), mermas, consumo teórico frente a real | shared, identity, masterdata, purchasing, catalog, ordering, recipes, inventory |
+| `reporting` | Informes: valor de stock, food cost real frente a teórico, mermas, rotación, precios de compra, ingeniería de menú. Solo lectura | todos los anteriores salvo reservations |
 
 `./mvnw test` genera además los diagramas de módulos (PlantUML/C4) en `backend/target/spring-modulith-docs`.
 
 Documentación adicional: [guía de arranque](docs/GUIA-ARRANQUE.md) (paso a paso en bash y PowerShell, despliegue de prueba, acceso remoto por túnel y problemas frecuentes), [registro de cambios y motivos](docs/CAMBIOS.md) y [documentación de la ampliación ERP](docs/erp/).
 
-## Ampliación ERP (en curso)
+## Ampliación ERP
 
-El proyecto está creciendo de CRM a back-office de restauración: compras, inventario, escandallos, mermas e informes de coste. Se desarrolla por fases, cada una documentada en [docs/erp](docs/erp/).
+El proyecto ha crecido de CRM a back-office de restauración: compras, inventario, escandallos, mermas e informes de coste, con su sección «Gestión» en el panel. Se ha desarrollado por fases, cada una documentada en [docs/erp](docs/erp/).
 
 | Fase | Contenido | Estado |
 |---|---|---|
@@ -51,7 +52,7 @@ El proyecto está creciendo de CRM a back-office de restauración: compras, inve
 | 3 | Almacenes, movimientos de stock, valoración PMP, recepción de albaranes, recuentos | Hecha |
 | 4 | Escandallos y producción | Hecha |
 | 5 | Mermas, descuento de stock por venta, consumo teórico frente a real | Hecha |
-| 6 | Informes y pantallas de gestión | Pendiente |
+| 6 | Informes y pantallas de gestión | Hecha |
 
 ## Puesta en marcha
 
@@ -148,8 +149,8 @@ El registro público (`POST /api/auth/register`) siempre crea usuarios `CUSTOMER
 | Rol | Quién | Puede |
 |---|---|---|
 | `ADMIN` | Administración | Todo, incluida la configuración (unidades de medida) y la gestión de encargados |
-| `MANAGER` | Encargado | Lo mismo que STAFF, más carta, proveedores, borrado de pedidos y reservas, y alta de personal y clientes |
-| `STAFF` | Trabajador | Panel de pedidos y reservas; consulta de proveedores, categorías de compra, artículos y stock (sin precios ni costes); recepción de mercancía, traspasos y recuentos; escandallos sin costes y producción de elaboraciones |
+| `MANAGER` | Encargado | Lo mismo que STAFF, más carta, proveedores, compras, ajustes, costes, informes, cancelación de pedidos entregados, borrado de pedidos y reservas, y alta de personal y clientes |
+| `STAFF` | Trabajador | Panel de pedidos y reservas; consulta de proveedores, categorías de compra, artículos y stock (sin precios ni costes); recepción de mercancía, traspasos y recuentos; escandallos sin costes y producción de elaboraciones; registro de mermas |
 | `CUSTOMER` | Cliente | Carta, sus pedidos y sus reservas |
 
 Los permisos son jerárquicos: ADMIN incluye los de MANAGER y MANAGER los de STAFF. El personal puede llevar etiquetas de puesto (`KITCHEN`, `FLOOR`, `BAR`, `DISHWASHING`), que son informativas y no dan permisos. Las rutas sin regla explícita se deniegan.
@@ -218,6 +219,12 @@ Leyenda de acceso: **público** (sin token), **auth** (cualquier usuario autenti
 | GET | `/api/waste?from=&to=&reason=` | MANAGER | Mermas valoradas al PMP |
 | GET | `/api/cost-control/orders/{id}/stock-posting` | MANAGER | Descuento de stock de un pedido entregado y su anulación |
 | GET | `/api/cost-control/consumption?fromCountId=&toCountId=` | MANAGER | Consumo teórico frente a real entre dos recuentos cerrados |
+| GET | `/api/reports/stock-value?at=&warehouseId=` | MANAGER | Valor contable del stock a una fecha, por artículo, categoría y almacén |
+| GET | `/api/reports/food-cost?from=&to=&warehouseId=` | MANAGER | Food cost real frente a teórico, con desglose del coste real y serie por día o semana |
+| GET | `/api/reports/waste?from=&to=&warehouseId=` | MANAGER | Mermas por motivo, por lo registrado y por artículo |
+| GET | `/api/reports/rotation?from=&to=&warehouseId=` | MANAGER | Rotación y días de cobertura por artículo |
+| GET | `/api/reports/supplier-prices?stockItemId=&supplierId=&from=&to=` | MANAGER | Evolución del precio pagado por unidad de inventario |
+| GET | `/api/reports/menu-engineering?from=&to=` | MANAGER | Matriz popularidad × margen (estrella, vaca, puzzle, perro) |
 
 Los errores tienen siempre la misma forma:
 
@@ -255,7 +262,7 @@ cd backend
 |---|---|
 | Unitarios (Mockito y JUnit) | Servicios de pedidos, reservas, autenticación, usuarios, productos y unidades; conversión de unidades; validación de CIF/NIF/NIE; horario de reservas; tokens |
 | Slice web (`@WebMvcTest`) | Reglas de autorización por rol y ruta, jerarquía de roles; CORS |
-| Integración (Testcontainers) | Flujos completos contra PostgreSQL con el esquema de Flyway: pedidos, roles, proveedores, archivado de productos, bloqueo optimista, compras (artículo, tarifa, pedido a proveedor y su ciclo de vida), inventario (recepción, PMP, lotes, traspasos, recuento, reposición, inmutabilidad del ledger), escandallos (coste, food cost, alérgenos, ciclos, producción, recálculo por evento), control de costes (descuento por venta idempotente, anulación, mermas, consumo frente a dos recuentos) |
+| Integración (Testcontainers) | Flujos completos contra PostgreSQL con el esquema de Flyway: pedidos, roles, proveedores, archivado de productos, bloqueo optimista, compras (artículo, tarifa, pedido a proveedor y su ciclo de vida), inventario (recepción, PMP, lotes, traspasos, recuento, reposición, inmutabilidad del ledger), escandallos (coste, food cost, alérgenos, ciclos, producción, recálculo por evento), control de costes (descuento por venta idempotente, anulación, mermas, consumo frente a dos recuentos), informes con importes calculados a mano |
 | Migraciones (Testcontainers + Flyway) | Migración de datos existentes (categorías, enlace pedido-producto) y adopción de una BD anterior a Flyway |
 | Modularidad (Spring Modulith) | Fronteras entre módulos y dependencias declaradas; genera la documentación de módulos |
 
@@ -271,6 +278,7 @@ Los tests de integración necesitan Docker; si no está disponible, se omiten y 
 - **Monolito modular con Spring Modulith** en lugar de paquetes por capa (`controller`, `service`, `entity`...). Cada área de negocio es un módulo con API explícita y dependencias verificadas en los tests. Prepara la ampliación ERP (compras, inventario, escandallos) sin que los módulos nuevos se acoplen a los internos de los existentes. Cuando un módulo necesita algo de otro que dependería de él, se invierte la dependencia: la carta pregunta si un producto tiene ventas a través de `ProductSalesCheck`, que implementa el módulo de pedidos.
 - **Bloqueo optimista (`@Version`)** en las entidades que se editan desde el panel: si dos personas modifican el mismo registro, la segunda recibe un 409 en vez de pisar el cambio.
 - **Enums en inglés**, con las etiquetas visibles resueltas en el frontend.
+- **Sistema de diseño con tokens CSS** (`frontend/src/styles/tokens.css`): colores, tipografía (Sora e Inter), espaciado y tamaños táctiles. Las pantallas de Gestión solo usan tokens y se cargan bajo demanda (`React.lazy`), así que el panel de sala y la parte de cliente no cargan su código.
 
 ## Limitaciones conocidas y trabajo pendiente
 
