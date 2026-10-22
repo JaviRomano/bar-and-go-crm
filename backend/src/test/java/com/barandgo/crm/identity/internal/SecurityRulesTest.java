@@ -39,6 +39,7 @@ import com.barandgo.crm.inventory.StockCountService;
 import com.barandgo.crm.inventory.WarehouseService;
 import com.barandgo.crm.masterdata.UnitOfMeasureService;
 import com.barandgo.crm.recipes.RecipeService;
+import com.barandgo.crm.costcontrol.CostControlService;
 import com.barandgo.crm.masterdata.VatRateService;
 import com.barandgo.crm.purchasing.PurchaseOrderService;
 import com.barandgo.crm.purchasing.StockItemService;
@@ -110,6 +111,9 @@ class SecurityRulesTest {
 
     @MockitoBean
     private RecipeService recipeService;
+
+    @MockitoBean
+    private CostControlService costControlService;
 
     @Test
     void catalogIsPublic() throws Exception {
@@ -231,7 +235,7 @@ class SecurityRulesTest {
 
     @Test
     void staffOperatesOrdersButCannotDeleteThem() throws Exception {
-        when(orderService.updateOrderStatus(any(), any())).thenReturn(new OrderResponseDTO());
+        when(orderService.updateOrderStatus(any(), any(), any())).thenReturn(new OrderResponseDTO());
 
         mockMvc.perform(patch("/api/orders/5/status")
                         .header(HttpHeaders.AUTHORIZATION, bearer(UserRole.STAFF))
@@ -406,6 +410,28 @@ class SecurityRulesTest {
         mockMvc.perform(post("/api/recipes/recalculate").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.STAFF)))
                 .andExpect(status().isForbidden());
         mockMvc.perform(get("/api/recipes").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.CUSTOMER)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void staffRecordsWasteButOnlyManagerSeesCosts() throws Exception {
+        String waste = "{\"warehouseId\":1,\"stockItemId\":2,\"quantity\":1,\"reason\":\"BREAKAGE\"}";
+        mockMvc.perform(post("/api/waste")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(UserRole.STAFF))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(waste))
+                .andExpect(status().isCreated());
+        mockMvc.perform(get("/api/waste").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.STAFF)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/cost-control/consumption?fromCountId=1&toCountId=2")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(UserRole.STAFF)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/waste").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.MANAGER)))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/waste")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(UserRole.CUSTOMER))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(waste))
                 .andExpect(status().isForbidden());
     }
 

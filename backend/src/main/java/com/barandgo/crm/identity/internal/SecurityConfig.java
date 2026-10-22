@@ -97,6 +97,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/recipes/*/production").hasRole(STAFF)
                 .requestMatchers(HttpMethod.GET, "/api/recipes/**").hasRole(STAFF)
                 .requestMatchers("/api/recipes/**").hasRole(MANAGER)
+                // Mermas: las registra quien las ve; el listado valorado y el consumo son del encargado
+                .requestMatchers(HttpMethod.POST, "/api/waste").hasRole(STAFF)
+                .requestMatchers("/api/waste/**", "/api/cost-control/**").hasRole(MANAGER)
                 // Lo que no tenga regla explícita queda cerrado, incluidos endpoints nuevos sin configurar
                 .anyRequest().denyAll()
             )
