@@ -32,6 +32,7 @@ El backend es un monolito modular ([Spring Modulith](https://spring.io/projects/
 | `purchasing` | Artículos de compra, precios por proveedor, pedidos a proveedor | shared, identity, masterdata |
 | `inventory` | Almacenes, movimientos de stock (inmutables), PMP, lotes, recepción de albaranes, recuentos, reposición | shared, identity, masterdata, purchasing |
 | `recipes` | Escandallos, sub-escandallos, food cost, alérgenos de cada plato, producción de elaboraciones | shared, identity, masterdata, purchasing, catalog, inventory |
+| `costcontrol` | Descuento de stock por venta (escucha los eventos de pedidos), mermas, consumo teórico frente a real | shared, identity, masterdata, purchasing, catalog, ordering, recipes, inventory |
 
 `./mvnw test` genera además los diagramas de módulos (PlantUML/C4) en `backend/target/spring-modulith-docs`.
 
@@ -49,7 +50,7 @@ El proyecto está creciendo de CRM a back-office de restauración: compras, inve
 | 2 | Artículos de compra, tipos de IVA, precios por proveedor, pedidos a proveedor | Hecha |
 | 3 | Almacenes, movimientos de stock, valoración PMP, recepción de albaranes, recuentos | Hecha |
 | 4 | Escandallos y producción | Hecha |
-| 5 | Mermas, descuento de stock por venta, consumo teórico frente a real | Pendiente |
+| 5 | Mermas, descuento de stock por venta, consumo teórico frente a real | Hecha |
 | 6 | Informes y pantallas de gestión | Pendiente |
 
 ## Puesta en marcha
@@ -213,6 +214,10 @@ Leyenda de acceso: **público** (sin token), **auth** (cualquier usuario autenti
 | POST, PUT | `/api/recipes/**` | MANAGER | Alta y edición; se rechazan ciclos de sub-escandallos |
 | GET, POST | `/api/recipes/{id}/cost-history`, `/recalculate` | MANAGER | Histórico de coste y recálculo completo |
 | POST | `/api/recipes/{id}/production` | STAFF | Producir una elaboración: consume ingredientes y da de alta el resultado al coste real |
+| POST | `/api/waste` | STAFF | Registrar una merma de un artículo (en cualquier unidad convertible) o de un plato (por raciones, según su escandallo) |
+| GET | `/api/waste?from=&to=&reason=` | MANAGER | Mermas valoradas al PMP |
+| GET | `/api/cost-control/orders/{id}/stock-posting` | MANAGER | Descuento de stock de un pedido entregado y su anulación |
+| GET | `/api/cost-control/consumption?fromCountId=&toCountId=` | MANAGER | Consumo teórico frente a real entre dos recuentos cerrados |
 
 Los errores tienen siempre la misma forma:
 
@@ -230,7 +235,7 @@ El cliente envía producto, cantidad y método de pago (`CARD` o `CASH`, se paga
 
 Cada línea guarda el producto (`productId`) y, además, una copia de su nombre y precio en el momento del pedido. Así el cliente no puede fijar el precio, y los cambios posteriores de la carta no alteran los pedidos pasados. No se aceptan productos no disponibles ni archivados.
 
-Estados: `CREATED` → `IN_PREPARATION` → `READY` → `DELIVERED`, o `CANCELLED`.
+Estados: `CREATED` → `IN_PREPARATION` → `READY` → `DELIVERED`, o `CANCELLED` desde cualquiera de ellos. No se pueden saltar pasos (409). Al entregar, el pedido descuenta del almacén de ventas lo que dicen los escandallos de sus platos; solo un encargado puede cancelar un pedido ya entregado, y entonces el stock vuelve. Un pedido entregado no se borra.
 
 ### Reservas
 
@@ -250,7 +255,7 @@ cd backend
 |---|---|
 | Unitarios (Mockito y JUnit) | Servicios de pedidos, reservas, autenticación, usuarios, productos y unidades; conversión de unidades; validación de CIF/NIF/NIE; horario de reservas; tokens |
 | Slice web (`@WebMvcTest`) | Reglas de autorización por rol y ruta, jerarquía de roles; CORS |
-| Integración (Testcontainers) | Flujos completos contra PostgreSQL con el esquema de Flyway: pedidos, roles, proveedores, archivado de productos, bloqueo optimista, compras (artículo, tarifa, pedido a proveedor y su ciclo de vida), inventario (recepción, PMP, lotes, traspasos, recuento, reposición, inmutabilidad del ledger), escandallos (coste, food cost, alérgenos, ciclos, producción, recálculo por evento) |
+| Integración (Testcontainers) | Flujos completos contra PostgreSQL con el esquema de Flyway: pedidos, roles, proveedores, archivado de productos, bloqueo optimista, compras (artículo, tarifa, pedido a proveedor y su ciclo de vida), inventario (recepción, PMP, lotes, traspasos, recuento, reposición, inmutabilidad del ledger), escandallos (coste, food cost, alérgenos, ciclos, producción, recálculo por evento), control de costes (descuento por venta idempotente, anulación, mermas, consumo frente a dos recuentos) |
 | Migraciones (Testcontainers + Flyway) | Migración de datos existentes (categorías, enlace pedido-producto) y adopción de una BD anterior a Flyway |
 | Modularidad (Spring Modulith) | Fronteras entre módulos y dependencias declaradas; genera la documentación de módulos |
 

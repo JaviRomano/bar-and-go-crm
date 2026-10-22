@@ -33,6 +33,13 @@ Puntos detectados fuera del alcance de la fase en curso. Se priorizan cuando se 
 
 ## Detectado en la Fase 4
 
-- **Registro persistente de eventos** (Spring Modulith JDBC): hoy un recálculo de coste se perdería si la aplicación cae justo después del cambio de precio. Se introduce en la Fase 5 junto al descuento de stock por venta.
+- ~~**Registro persistente de eventos**~~: hecho en la Fase 5.
 - **Alérgenos en la carta pública** se calculan en cada petición (carga artículos y escandallos). Suficiente con decenas de productos; con más, guardarlos al recalcular el escandallo.
 - **Escandallos demo simplificados**: faltan artículos como el pan, así que los food cost demo salen bajos.
+
+## Detectado en la Fase 5
+
+- **Un solo almacén de ventas por local**: la bebida de barra y la comida de cocina salen del mismo almacén. Para descontar cada artículo de su almacén haría falta un almacén de salida por artículo o por familia.
+- **Alerta de stock negativo** (D11): las ventas pueden dejar stock negativo y hoy solo se ve en la consulta de stock. Encaja en el panel de la Fase 6.
+- **Eventos fallidos sin pantalla**: si un descuento de stock falla (por ejemplo, sin almacén de ventas), el evento queda pendiente y se reintenta al reiniciar. No hay vista ni reintento manual desde el panel.
+- **Consumo entre recuentos**: solo cuentan los artículos contados en los dos recuentos, y el periodo va de cierre a cierre. Un recuento hecho con el almacén en marcha (ver Fase 3) desplaza los movimientos entre el conteo y el cierre.
