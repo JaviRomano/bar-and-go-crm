@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Power, PowerOff } from 'lucide-react';
 import productService from '../../services/productService';
+import productCategoryService from '../../services/productCategoryService';
 import ProductForm from './ProductForm';
 
 const ProductList = () => {
@@ -9,10 +10,21 @@ const ProductList = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [filter, setFilter] = useState('TODOS');
-  
+  const [categoryNames, setCategoryNames] = useState([]);
+
   useEffect(() => {
     loadProducts();
+    loadCategories();
   }, []);
+
+  const loadCategories = async () => {
+    try {
+      const data = await productCategoryService.getAll();
+      setCategoryNames(data.map(category => category.name));
+    } catch (error) {
+      console.error('Error cargando categorías:', error);
+    }
+  };
   
   const loadProducts = async () => {
     try {
@@ -71,7 +83,7 @@ const ProductList = () => {
     ? products
     : products.filter(p => p.category === filter);
   
-  const categories = ['TODOS', 'ENTRANTES', 'PRINCIPALES', 'POSTRES', 'BEBIDAS'];
+  const categories = ['TODOS', ...categoryNames];
   
   if (loading) {
     return (

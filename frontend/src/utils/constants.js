@@ -5,13 +5,25 @@ export const SHOW_DEMO_LOGIN = import.meta.env.DEV || import.meta.env.VITE_SHOW_
 
 export const USER_ROLES = {
   ADMIN: 'ADMIN',
+  MANAGER: 'MANAGER',
+  STAFF: 'STAFF',
   CUSTOMER: 'CUSTOMER'
 };
 
 export const USER_ROLE_LABELS = {
   ADMIN: 'Admin',
+  MANAGER: 'Encargado',
+  STAFF: 'Personal',
   CUSTOMER: 'Cliente'
 };
+
+// Personal del local: entra al panel de gestión
+export const BACK_OFFICE_ROLES = [USER_ROLES.ADMIN, USER_ROLES.MANAGER, USER_ROLES.STAFF];
+
+// Mantienen la carta y pueden borrar pedidos y reservas
+export const MANAGEMENT_ROLES = [USER_ROLES.ADMIN, USER_ROLES.MANAGER];
+
+export const homePathFor = (role) => (BACK_OFFICE_ROLES.includes(role) ? '/admin' : '/cliente');
 
 export const ORDER_STATUS = {
   CREATED: 'CREATED',
@@ -25,13 +37,6 @@ export const RESERVATION_STATUS = {
   PENDING: 'PENDING',
   CONFIRMED: 'CONFIRMED',
   CANCELLED: 'CANCELLED'
-};
-
-export const PRODUCT_CATEGORIES = {
-  ENTRANTES: 'ENTRANTES',
-  PRINCIPALES: 'PRINCIPALES',
-  POSTRES: 'POSTRES',
-  BEBIDAS: 'BEBIDAS'
 };
 
 export const PAYMENT_METHOD_LABELS = {

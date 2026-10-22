@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/useAuth';
 import { 
   Package, 
   Calendar, 
@@ -14,6 +15,7 @@ import orderService from '../services/orderService';
 import { todayString } from '../utils/dates';
 
 const AdminDashboard = () => {
+  const { canManage } = useAuth();
   const [stats, setStats] = useState({
     totalProducts: 0,
     totalReservations: 0,
@@ -170,10 +172,12 @@ const AdminDashboard = () => {
           </h2>
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <Link to="/admin/products" className="btn btn-primary" style={{ width: '100%' }}>
-              <Package size={20} />
-              Gestionar Productos
-            </Link>
+            {canManage() && (
+              <Link to="/admin/products" className="btn btn-primary" style={{ width: '100%' }}>
+                <Package size={20} />
+                Gestionar Productos
+              </Link>
+            )}
             <Link to="/admin/reservations" className="btn btn-secondary" style={{ width: '100%' }}>
               <Calendar size={20} />
               Ver Reservas

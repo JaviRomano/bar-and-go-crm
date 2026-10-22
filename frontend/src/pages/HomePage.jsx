@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
+import { homePathFor } from '../utils/constants';
 
 const HomePage = () => {
   const { user } = useAuth();
@@ -9,11 +10,7 @@ const HomePage = () => {
   useEffect(() => {
     // Redirigir automáticamente según el rol
     if (user) {
-      if (user.role === 'ADMIN') {
-        navigate('/admin');
-      } else {
-        navigate('/cliente');
-      }
+      navigate(homePathFor(user.role));
     } else {
       navigate('/login');
     }

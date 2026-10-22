@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
-import { USER_ROLE_LABELS } from '../../utils/constants';
+import { USER_ROLE_LABELS, homePathFor } from '../../utils/constants';
 import { 
   LogOut, 
   User, 
@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 
 const Navbar = () => {
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout, isBackOffice, canManage } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
@@ -30,10 +30,13 @@ const Navbar = () => {
   
   if (!user) return null;
   
-  // Menú según rol
-  const menuItems = isAdmin() ? [
+  const backOffice = isBackOffice();
+  const accentColor = backOffice ? '#ef4444' : '#10b981';
+
+  // Menú según rol: la carta solo la mantienen admin y encargado
+  const menuItems = backOffice ? [
     { path: '/admin', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
-    { path: '/admin/products', icon: <Package size={20} />, label: 'Productos' },
+    ...(canManage() ? [{ path: '/admin/products', icon: <Package size={20} />, label: 'Productos' }] : []),
     { path: '/admin/reservations', icon: <Calendar size={20} />, label: 'Reservas' },
     { path: '/admin/orders', icon: <ShoppingCart size={20} />, label: 'Pedidos' }
   ] : [
@@ -81,7 +84,7 @@ const Navbar = () => {
           
           {/* Logo */}
           <Link 
-            to={isAdmin() ? '/admin' : '/cliente'} 
+            to={homePathFor(user.role)} 
             style={{ 
               textDecoration: 'none', 
               color: 'white',
@@ -111,7 +114,7 @@ const Navbar = () => {
             </span>
             <span style={{ 
               padding: '0.125rem 0.5rem',
-              backgroundColor: isAdmin() ? '#ef4444' : '#10b981',
+              backgroundColor: accentColor,
               borderRadius: '9999px',
               fontSize: '0.75rem',
               fontWeight: 'bold'
@@ -171,7 +174,7 @@ const Navbar = () => {
             <div>
               <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>Bar&Go</h2>
               <p style={{ fontSize: '0.75rem', opacity: 0.7 }}>
-                {isAdmin() ? 'Panel Admin' : 'Portal Cliente'}
+                {backOffice ? 'Panel de gestión' : 'Portal Cliente'}
               </p>
             </div>
           </div>
@@ -205,7 +208,7 @@ const Navbar = () => {
               width: '48px',
               height: '48px',
               borderRadius: '50%',
-              backgroundColor: isAdmin() ? '#ef4444' : '#10b981',
+              backgroundColor: accentColor,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -248,7 +251,7 @@ const Navbar = () => {
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)';
-                e.currentTarget.style.borderLeftColor = isAdmin() ? '#ef4444' : '#10b981';
+                e.currentTarget.style.borderLeftColor = accentColor;
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = 'transparent';
