@@ -28,7 +28,8 @@ El backend es un monolito modular ([Spring Modulith](https://spring.io/projects/
 | `catalog` | Carta: productos y categorías | shared |
 | `ordering` | Pedidos para recoger | shared, identity, catalog |
 | `reservations` | Reservas de mesa | shared, identity |
-| `masterdata` | Unidades de medida, proveedores, categorías de compra | shared |
+| `masterdata` | Unidades de medida, proveedores, categorías de compra, tipos de IVA, alérgenos | shared |
+| `purchasing` | Artículos de compra, precios por proveedor, pedidos a proveedor | shared, identity, masterdata |
 
 `./mvnw test` genera además los diagramas de módulos (PlantUML/C4) en `backend/target/spring-modulith-docs`.
 
@@ -43,7 +44,7 @@ El proyecto está creciendo de CRM a back-office de restauración: compras, inve
 | 0 | Auditoría, modelo de dominio y decisiones | Hecha |
 | 1 | Flyway, roles de encargado y personal, unidades de medida, proveedores, categorías | Hecha |
 | 1.5 | Monolito modular con Spring Modulith | Hecha |
-| 2 | Artículos de compra, tipos de IVA, precios por proveedor, pedidos a proveedor | Pendiente |
+| 2 | Artículos de compra, tipos de IVA, precios por proveedor, pedidos a proveedor | Hecha |
 | 3 | Almacenes, movimientos de stock, valoración PMP, recepción de albaranes, recuentos | Pendiente |
 | 4 | Escandallos y producción | Pendiente |
 | 5 | Mermas, descuento de stock por venta, consumo teórico frente a real | Pendiente |
@@ -143,7 +144,7 @@ El registro público (`POST /api/auth/register`) siempre crea usuarios `CUSTOMER
 |---|---|---|
 | `ADMIN` | Administración | Todo, incluida la configuración (unidades de medida) y la gestión de encargados |
 | `MANAGER` | Encargado | Lo mismo que STAFF, más carta, proveedores, borrado de pedidos y reservas, y alta de personal y clientes |
-| `STAFF` | Trabajador | Panel de pedidos y reservas; consulta de proveedores y categorías de compra |
+| `STAFF` | Trabajador | Panel de pedidos y reservas; consulta de proveedores, categorías de compra y artículos (sin precios) |
 | `CUSTOMER` | Cliente | Carta, sus pedidos y sus reservas |
 
 Los permisos son jerárquicos: ADMIN incluye los de MANAGER y MANAGER los de STAFF. El personal puede llevar etiquetas de puesto (`KITCHEN`, `FLOOR`, `BAR`, `DISHWASHING`), que son informativas y no dan permisos. Las rutas sin regla explícita se deniegan.
@@ -184,6 +185,13 @@ Leyenda de acceso: **público** (sin token), **auth** (cualquier usuario autenti
 | POST, PUT, DELETE | `/api/item-categories/**` | MANAGER | Gestión de esas categorías |
 | GET | `/api/units`, `/conversions`, `/convert?quantity=&from=&to=` | MANAGER | Unidades de medida, conversiones y conversión de cantidades |
 | POST, DELETE | `/api/units/**` | ADMIN | Alta de unidades y conversiones genéricas |
+| GET | `/api/vat-rates`, `/{id}` | MANAGER | Tipos de IVA |
+| POST, PUT | `/api/vat-rates/**` | ADMIN | Alta y modificación. Sin borrado: se desactivan |
+| GET | `/api/stock-items?active=&categoryId=`, `/{id}` | STAFF | Artículos de compra |
+| POST, PUT | `/api/stock-items/**` | MANAGER | Alta y modificación, con alérgenos y conversiones propias (1 caja = 24 ud) |
+| GET, PUT, DELETE | `/api/stock-items/{id}/suppliers/{supplierId}` | MANAGER | Precio del artículo en cada proveedor |
+| GET | `/api/purchase-orders?status=&supplierId=`, `/{id}` | MANAGER | Pedidos a proveedor, con base e IVA por tipo |
+| POST, PUT, DELETE | `/api/purchase-orders/**` | MANAGER | Alta y edición de borradores; `/{id}/send` y `/{id}/cancel` |
 
 Los errores tienen siempre la misma forma:
 
@@ -221,7 +229,7 @@ cd backend
 |---|---|
 | Unitarios (Mockito y JUnit) | Servicios de pedidos, reservas, autenticación, usuarios, productos y unidades; conversión de unidades; validación de CIF/NIF/NIE; horario de reservas; tokens |
 | Slice web (`@WebMvcTest`) | Reglas de autorización por rol y ruta, jerarquía de roles; CORS |
-| Integración (Testcontainers) | Flujo completo contra PostgreSQL con el esquema de Flyway: pedidos, roles, proveedores, archivado de productos, bloqueo optimista |
+| Integración (Testcontainers) | Flujos completos contra PostgreSQL con el esquema de Flyway: pedidos, roles, proveedores, archivado de productos, bloqueo optimista, compras (artículo, tarifa, pedido a proveedor y su ciclo de vida) |
 | Migraciones (Testcontainers + Flyway) | Migración de datos existentes (categorías, enlace pedido-producto) y adopción de una BD anterior a Flyway |
 | Modularidad (Spring Modulith) | Fronteras entre módulos y dependencias declaradas; genera la documentación de módulos |
 
