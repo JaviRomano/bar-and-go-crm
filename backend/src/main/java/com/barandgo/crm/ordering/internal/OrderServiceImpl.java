@@ -19,6 +19,7 @@ import com.barandgo.crm.ordering.OrderEvents.OrderDeliveryReverted;
 import com.barandgo.crm.shared.ResourceNotFoundException;
 import com.barandgo.crm.identity.CurrentUser;
 import com.barandgo.crm.ordering.OrderService;
+import com.barandgo.crm.ordering.SoldLine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -121,6 +122,20 @@ public class OrderServiceImpl implements OrderService {
     @Transactional(readOnly = true)
     public List<OrderResponseDTO> getUpcomingOrders() {
         return toResponseList(orderRepository.findFutureOrders(LocalDateTime.now()));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<SoldLine> getDeliveredSales(Instant from, Instant to) {
+        if (from.isAfter(to)) {
+            throw new BadRequestException("La fecha 'from' no puede ser posterior a 'to'");
+        }
+        return orderRepository.findDeliveredBetween(OrderStatus.DELIVERED, from, to).stream()
+                .flatMap(order -> order.getItems().stream()
+                        .map(item -> new SoldLine(order.getId(), order.getDeliveredAt(),
+                                item.getProduct() != null ? item.getProduct().getId() : null, item.getProductName(),
+                                item.getQuantity(), item.getUnitPrice())))
+                .toList();
     }
 
     @Override

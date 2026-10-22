@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.barandgo.crm.identity.CurrentUser;
 import com.barandgo.crm.inventory.InventoryDTOs.AdjustmentRequestDTO;
 import com.barandgo.crm.inventory.InventoryDTOs.ExpiringLotDTO;
+import com.barandgo.crm.inventory.InventoryDTOs.MovementTotalDTO;
 import com.barandgo.crm.inventory.InventoryDTOs.StockBalanceDTO;
 import com.barandgo.crm.inventory.InventoryDTOs.StockMovementDTO;
 import com.barandgo.crm.inventory.InventoryDTOs.TransferRequestDTO;
@@ -57,11 +58,13 @@ public class InventoryServiceImpl implements InventoryService, StockPostingServi
     private final StockValuationRepository valuationRepository;
     private final StockMovementRepository movementRepository;
     private final StockLotRepository lotRepository;
+    private final MovementTotalsQuery movementTotals;
 
     public InventoryServiceImpl(StockLedger ledger, ItemCatalog itemCatalog, WarehouseRepository warehouseRepository,
                                 StockBalanceRepository balanceRepository,
                                 StockValuationRepository valuationRepository,
-                                StockMovementRepository movementRepository, StockLotRepository lotRepository) {
+                                StockMovementRepository movementRepository, StockLotRepository lotRepository,
+                                MovementTotalsQuery movementTotals) {
         this.ledger = ledger;
         this.itemCatalog = itemCatalog;
         this.warehouseRepository = warehouseRepository;
@@ -69,6 +72,7 @@ public class InventoryServiceImpl implements InventoryService, StockPostingServi
         this.valuationRepository = valuationRepository;
         this.movementRepository = movementRepository;
         this.lotRepository = lotRepository;
+        this.movementTotals = movementTotals;
     }
 
     @Override
@@ -243,6 +247,12 @@ public class InventoryServiceImpl implements InventoryService, StockPostingServi
         BigDecimal total = reversals.stream().map(StockMovement::getTotalCost).reduce(BigDecimal.ZERO, BigDecimal::add);
         logger.info("Anulados {} movimientos de {} {}", reversals.size(), source, sourceId);
         return new PostingResult(operation, toDTOs(reversals), total);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<MovementTotalDTO> getMovementTotals(Long warehouseId, Instant from, Instant to) {
+        return movementTotals.query(warehouseId, from, to);
     }
 
     @Override

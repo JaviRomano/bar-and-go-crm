@@ -16,7 +16,7 @@ public interface CostControlService {
     WasteDTO registerWaste(WasteRequest request, CurrentUser requester);
 
     /** Filtros opcionales: null no filtra. Más recientes primero. */
-    List<WasteDTO> getWaste(Instant from, Instant to, WasteReason reason);
+    List<WasteDTO> getWaste(Instant from, Instant to, WasteReason reason, Long warehouseId);
 
     Optional<OrderStockPostingDTO> getOrderPosting(Long orderId);
 

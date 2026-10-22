@@ -115,6 +115,19 @@ public final class InventoryDTOs {
             String notes) {
     }
 
+    /**
+     * Suma de los movimientos de un artículo en un almacén, por tipo. value lleva signo (negativo en las
+     * salidas) y, al ser el ledger valorado a PMP, la suma de todos los tipos hasta una fecha es el valor
+     * contable del stock en esa fecha.
+     */
+    public record MovementTotalDTO(
+            Long stockItemId,
+            Long warehouseId,
+            MovementType type,
+            BigDecimal quantity,
+            BigDecimal value) {
+    }
+
     public record ExpiringLotDTO(
             Long lotId,
             Long stockItemId,

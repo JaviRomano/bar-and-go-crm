@@ -40,6 +40,7 @@ import com.barandgo.crm.inventory.WarehouseService;
 import com.barandgo.crm.masterdata.UnitOfMeasureService;
 import com.barandgo.crm.recipes.RecipeService;
 import com.barandgo.crm.costcontrol.CostControlService;
+import com.barandgo.crm.reporting.ReportService;
 import com.barandgo.crm.masterdata.VatRateService;
 import com.barandgo.crm.purchasing.PurchaseOrderService;
 import com.barandgo.crm.purchasing.StockItemService;
@@ -114,6 +115,9 @@ class SecurityRulesTest {
 
     @MockitoBean
     private CostControlService costControlService;
+
+    @MockitoBean
+    private ReportService reportService;
 
     @Test
     void catalogIsPublic() throws Exception {
@@ -433,6 +437,14 @@ class SecurityRulesTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(waste))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void reportsAreForManagers() throws Exception {
+        mockMvc.perform(get("/api/reports/food-cost").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.STAFF)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/reports/stock-value").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.MANAGER)))
+                .andExpect(status().isOk());
     }
 
     @Test

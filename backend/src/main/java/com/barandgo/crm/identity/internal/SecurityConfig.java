@@ -100,6 +100,7 @@ public class SecurityConfig {
                 // Mermas: las registra quien las ve; el listado valorado y el consumo son del encargado
                 .requestMatchers(HttpMethod.POST, "/api/waste").hasRole(STAFF)
                 .requestMatchers("/api/waste/**", "/api/cost-control/**").hasRole(MANAGER)
+                .requestMatchers("/api/reports/**").hasRole(MANAGER)
                 // Lo que no tenga regla explícita queda cerrado, incluidos endpoints nuevos sin configurar
                 .anyRequest().denyAll()
             )

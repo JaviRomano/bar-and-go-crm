@@ -6,6 +6,7 @@ import java.util.List;
 import com.barandgo.crm.identity.CurrentUser;
 import com.barandgo.crm.inventory.InventoryDTOs.AdjustmentRequestDTO;
 import com.barandgo.crm.inventory.InventoryDTOs.ExpiringLotDTO;
+import com.barandgo.crm.inventory.InventoryDTOs.MovementTotalDTO;
 import com.barandgo.crm.inventory.InventoryDTOs.StockBalanceDTO;
 import com.barandgo.crm.inventory.InventoryDTOs.StockMovementDTO;
 import com.barandgo.crm.inventory.InventoryDTOs.TransferRequestDTO;
@@ -23,6 +24,12 @@ public interface InventoryService {
 
     /** Filtros opcionales: null no filtra. Más recientes primero. */
     List<StockMovementDTO> getMovements(Long stockItemId, Long warehouseId, Instant from, Instant to);
+
+    /**
+     * Movimientos agregados por artículo, almacén y tipo. Filtros opcionales: from incluido, to excluido.
+     * Sin from, desde el primer movimiento: es la posición de stock a la fecha to.
+     */
+    List<MovementTotalDTO> getMovementTotals(Long warehouseId, Instant from, Instant to);
 
     List<StockMovementDTO> adjust(AdjustmentRequestDTO request, CurrentUser requester);
 

@@ -137,7 +137,7 @@ public class CostControlServiceImpl implements CostControlService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<WasteDTO> getWaste(Instant from, Instant to, WasteReason reason) {
+    public List<WasteDTO> getWaste(Instant from, Instant to, WasteReason reason, Long warehouseId) {
         Specification<Waste> filter = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             if (from != null) {
@@ -148,6 +148,9 @@ public class CostControlServiceImpl implements CostControlService {
             }
             if (reason != null) {
                 predicates.add(cb.equal(root.get("reason"), reason));
+            }
+            if (warehouseId != null) {
+                predicates.add(cb.equal(root.get("warehouseId"), warehouseId));
             }
             return cb.and(predicates.toArray(Predicate[]::new));
         };

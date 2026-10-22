@@ -49,8 +49,9 @@ public class CostControlController {
     public ResponseEntity<List<WasteDTO>> getWaste(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
-            @RequestParam(required = false) WasteReason reason) {
-        return ResponseEntity.ok(costControlService.getWaste(from, to, reason));
+            @RequestParam(required = false) WasteReason reason,
+            @RequestParam(required = false) Long warehouseId) {
+        return ResponseEntity.ok(costControlService.getWaste(from, to, reason, warehouseId));
     }
 
     @GetMapping("/api/cost-control/orders/{orderId}/stock-posting")
