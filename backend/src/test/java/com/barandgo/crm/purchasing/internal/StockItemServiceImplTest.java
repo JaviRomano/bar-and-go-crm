@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import com.barandgo.crm.masterdata.Allergen;
 import com.barandgo.crm.masterdata.ItemCategoryDTO;
@@ -28,6 +29,7 @@ import com.barandgo.crm.masterdata.UnitOfMeasureService;
 import com.barandgo.crm.masterdata.VatRateDTO;
 import com.barandgo.crm.masterdata.VatRateService;
 import com.barandgo.crm.purchasing.ItemUnitConversionDTO;
+import com.barandgo.crm.purchasing.StockItemCostChanged;
 import com.barandgo.crm.purchasing.StockItemDTO;
 import com.barandgo.crm.purchasing.StockItemSupplierDTO;
 import com.barandgo.crm.purchasing.StockItemUsageCheck;
@@ -61,6 +63,9 @@ class StockItemServiceImplTest {
     @Mock
     private StockItemUsageCheck usageCheck;
 
+    @Mock
+    private ApplicationEventPublisher events;
+
     private StockItemServiceImpl service;
 
     @BeforeEach
@@ -72,7 +77,7 @@ class StockItemServiceImplTest {
         lenient().when(stockItemRepository.save(any(StockItem.class))).thenAnswer(invocation -> invocation.getArgument(0));
         service = new StockItemServiceImpl(stockItemRepository, supplierPriceRepository, priceHistoryRepository,
                 new UnitCatalog(unitService),
-                itemCategoryService, vatRateService, supplierService, usageCheck);
+                itemCategoryService, vatRateService, supplierService, usageCheck, events);
     }
 
     @Test
@@ -215,6 +220,8 @@ class StockItemServiceImplTest {
         verify(priceHistoryRepository).save(any(PurchasePriceHistory.class));
         assertThat(tariff.getUnitPrice()).isEqualByComparingTo("9.60");
         verify(supplierPriceRepository).save(tariff);
+        // Otros módulos (escandallos) se enteran del cambio de coste sin que compras los conozca
+        verify(events).publishEvent(new StockItemCostChanged(7L));
     }
 
     private static StockItemDTO water(List<ItemUnitConversionDTO> conversions) {

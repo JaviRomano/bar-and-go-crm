@@ -3,6 +3,7 @@ package com.barandgo.crm.purchasing;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Artículos de compra y sus precios por proveedor. Sin borrado: un artículo en desuso se desactiva.
@@ -24,6 +25,9 @@ public interface StockItemService {
     StockItemSupplierDTO setSupplierPrice(Long stockItemId, Long supplierId, StockItemSupplierDTO priceDTO);
 
     void removeSupplier(Long stockItemId, Long supplierId);
+
+    /** Coste de reposición del artículo, o vacío si ningún proveedor activo tiene tarifa. */
+    Optional<ReferenceCostDTO> getReferenceCost(Long stockItemId);
 
     /** Compras registradas del artículo, la más reciente primero. */
     List<PurchasePriceDTO> getPriceHistory(Long stockItemId);

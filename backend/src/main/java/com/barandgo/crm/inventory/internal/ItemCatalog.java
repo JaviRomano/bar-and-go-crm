@@ -2,7 +2,6 @@ package com.barandgo.crm.inventory.internal;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -13,6 +12,7 @@ import com.barandgo.crm.masterdata.UnitConverter;
 import com.barandgo.crm.masterdata.UnitOfMeasureService;
 import com.barandgo.crm.purchasing.StockItemDTO;
 import com.barandgo.crm.purchasing.StockItemService;
+import com.barandgo.crm.purchasing.StockItemUnits;
 
 /**
  * Artículos de compra vistos desde inventario: datos del artículo y su conversor de unidades
@@ -47,9 +47,7 @@ class ItemCatalog {
     }
 
     static UnitConverter converterFor(StockItemDTO item, UnitConverter generic) {
-        return generic.withItemRules(item.conversions() == null ? List.of() : item.conversions().stream()
-                .map(c -> new UnitConverter.Rule(c.fromUnit(), c.toUnit(), c.factor()))
-                .toList());
+        return StockItemUnits.converterFor(item, generic);
     }
 
     record Item(StockItemDTO dto, UnitConverter converter) {

@@ -1,7 +1,6 @@
 package com.barandgo.crm.inventory.internal;
 
 import java.math.BigDecimal;
-import java.math.MathContext;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -10,7 +9,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -34,12 +32,13 @@ import com.barandgo.crm.purchasing.PurchaseOrderService;
 import com.barandgo.crm.purchasing.PurchaseOrderStatus;
 import com.barandgo.crm.purchasing.StockItemDTO;
 import com.barandgo.crm.purchasing.StockItemService;
-import com.barandgo.crm.purchasing.StockItemSupplierDTO;
+import com.barandgo.crm.purchasing.ReferenceCostDTO;
 
 /**
  * Sugerencia de reposición. Stock del local (todos sus almacenes) más lo pedido y pendiente de
- * recibir, comparado con el mínimo. Proveedor: el habitual si tiene tarifa; si no, el de tarifa más
- * barata por unidad de inventario; sin tarifa, el artículo queda en el grupo "sin proveedor".
+ * recibir, comparado con el mínimo. Proveedor: el del coste de referencia de compras (el habitual si
+ * tiene tarifa; si no, el más barato por unidad de inventario); sin tarifa, el artículo queda en el
+ * grupo "sin proveedor".
  */
 @Service
 @Transactional
@@ -73,9 +72,6 @@ public class ReplenishmentServiceImpl implements ReplenishmentService {
         Map<Long, BigDecimal> onOrder = pendingOnOrder(items, generic);
         Map<Long, String> supplierNames = supplierService.getSuppliers(null).stream()
                 .collect(Collectors.toMap(SupplierDTO::id, SupplierDTO::legalName));
-        Set<Long> activeSuppliers = supplierService.getSuppliers(true).stream()
-                .map(SupplierDTO::id)
-                .collect(Collectors.toSet());
 
         Map<Long, List<Line>> bySupplier = new LinkedHashMap<>();
         List<Line> withoutSupplier = new ArrayList<>();
@@ -88,13 +84,13 @@ public class ReplenishmentServiceImpl implements ReplenishmentService {
                     ReplenishmentCalculator.suggestedStockQuantity(item.minStock(), item.maxStock(), hand, ordered)
                             .ifPresent(needed -> {
                                 UnitConverter converter = ItemCatalog.converterFor(item, generic);
-                                Optional<StockItemSupplierDTO> tariff = chooseTariff(item, converter, activeSuppliers);
-                                String unit = tariff.map(StockItemSupplierDTO::purchaseUnit).orElse(item.purchaseUnit());
+                                Optional<ReferenceCostDTO> tariff = stockItemService.getReferenceCost(item.id());
+                                String unit = tariff.map(ReferenceCostDTO::unit).orElse(item.purchaseUnit());
                                 BigDecimal perUnit = converter.factor(unit, item.stockUnit());
                                 Line line = new Line(item.id(), item.code(), item.name(), item.stockUnit(), hand,
                                         ordered, item.minStock(), item.maxStock(), needed, unit,
                                         ReplenishmentCalculator.wholePurchaseUnits(needed, perUnit),
-                                        tariff.map(StockItemSupplierDTO::unitPrice).orElse(null));
+                                        tariff.map(ReferenceCostDTO::unitPrice).orElse(null));
                                 tariff.ifPresentOrElse(
                                         t -> bySupplier.computeIfAbsent(t.supplierId(), id -> new ArrayList<>()).add(line),
                                         () -> withoutSupplier.add(line));
@@ -146,21 +142,5 @@ public class ReplenishmentServiceImpl implements ReplenishmentService {
                     }
                 });
         return pending;
-    }
-
-    private Optional<StockItemSupplierDTO> chooseTariff(StockItemDTO item, UnitConverter converter,
-                                                        Set<Long> activeSuppliers) {
-        List<StockItemSupplierDTO> tariffs = stockItemService.getSuppliers(item.id()).stream()
-                .filter(t -> activeSuppliers.contains(t.supplierId()))
-                .toList();
-        Optional<StockItemSupplierDTO> preferred = tariffs.stream()
-                .filter(t -> t.supplierId().equals(item.preferredSupplierId()))
-                .findFirst();
-        if (preferred.isPresent()) {
-            return preferred;
-        }
-        // Precio por unidad de inventario para comparar tarifas en unidades distintas
-        return tariffs.stream().min(Comparator.comparing((StockItemSupplierDTO t) -> t.unitPrice()
-                .divide(converter.factor(t.purchaseUnit(), item.stockUnit()), MathContext.DECIMAL64)));
     }
 }

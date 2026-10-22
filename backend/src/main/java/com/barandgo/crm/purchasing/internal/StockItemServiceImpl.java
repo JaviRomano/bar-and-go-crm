@@ -1,16 +1,21 @@
 package com.barandgo.crm.purchasing.internal;
 
 import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +29,8 @@ import com.barandgo.crm.masterdata.VatRateDTO;
 import com.barandgo.crm.masterdata.VatRateService;
 import com.barandgo.crm.purchasing.ItemUnitConversionDTO;
 import com.barandgo.crm.purchasing.PurchasePriceDTO;
+import com.barandgo.crm.purchasing.ReferenceCostDTO;
+import com.barandgo.crm.purchasing.StockItemCostChanged;
 import com.barandgo.crm.purchasing.StockItemDTO;
 import com.barandgo.crm.purchasing.StockItemService;
 import com.barandgo.crm.purchasing.StockItemSupplierDTO;
@@ -46,6 +53,7 @@ public class StockItemServiceImpl implements StockItemService {
     private final VatRateService vatRateService;
     private final SupplierService supplierService;
     private final StockItemUsageCheck usageCheck;
+    private final ApplicationEventPublisher events;
 
     public StockItemServiceImpl(StockItemRepository stockItemRepository,
                                 StockItemSupplierRepository supplierPriceRepository,
@@ -54,7 +62,8 @@ public class StockItemServiceImpl implements StockItemService {
                                 ItemCategoryService itemCategoryService,
                                 VatRateService vatRateService,
                                 SupplierService supplierService,
-                                StockItemUsageCheck usageCheck) {
+                                StockItemUsageCheck usageCheck,
+                                ApplicationEventPublisher events) {
         this.stockItemRepository = stockItemRepository;
         this.supplierPriceRepository = supplierPriceRepository;
         this.priceHistoryRepository = priceHistoryRepository;
@@ -63,6 +72,7 @@ public class StockItemServiceImpl implements StockItemService {
         this.vatRateService = vatRateService;
         this.supplierService = supplierService;
         this.usageCheck = usageCheck;
+        this.events = events;
     }
 
     @Override
@@ -126,7 +136,10 @@ public class StockItemServiceImpl implements StockItemService {
         }
 
         logger.info("Artículo de compra {} actualizado", id);
-        return toDTO(stockItemRepository.save(item), units, categoryName);
+        StockItem saved = stockItemRepository.save(item);
+        // Proveedor habitual o conversiones pueden cambiar su coste por unidad
+        events.publishEvent(new StockItemCostChanged(id));
+        return toDTO(saved, units, categoryName);
     }
 
     @Override
@@ -160,6 +173,7 @@ public class StockItemServiceImpl implements StockItemService {
         price.setUnitPrice(priceDTO.unitPrice());
 
         StockItemSupplier saved = supplierPriceRepository.save(price);
+        events.publishEvent(new StockItemCostChanged(stockItemId));
         logger.info("Precio del artículo {} en el proveedor {}: {} por {}",
                 stockItemId, supplierId, saved.getUnitPrice(), priceDTO.purchaseUnit());
         return toDTO(saved, units, supplier.legalName());
@@ -171,6 +185,7 @@ public class StockItemServiceImpl implements StockItemService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "El proveedor " + supplierId + " no tiene precio para el artículo " + stockItemId));
         supplierPriceRepository.delete(price);
+        events.publishEvent(new StockItemCostChanged(stockItemId));
         logger.info("Proveedor {} retirado del artículo {}", supplierId, stockItemId);
     }
 
@@ -212,6 +227,35 @@ public class StockItemServiceImpl implements StockItemService {
                         units.converterFor(item.getConversions()).factor(tariffUnit, unit));
         tariff.setUnitPrice(tariffPrice);
         supplierPriceRepository.save(tariff);
+        events.publishEvent(new StockItemCostChanged(stockItemId));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<ReferenceCostDTO> getReferenceCost(Long stockItemId) {
+        StockItem item = findItem(stockItemId);
+        UnitCatalog.Units units = unitCatalog.load();
+        UnitConverter converter = units.converterFor(item.getConversions());
+        String stockUnit = units.codeOf(item.getStockUnitId());
+        Set<Long> activeSuppliers = supplierService.getSuppliers(true).stream()
+                .map(SupplierDTO::id)
+                .collect(Collectors.toSet());
+
+        List<ReferenceCostDTO> candidates = supplierPriceRepository
+                .findByStockItemIdOrderByUnitPriceAsc(stockItemId).stream()
+                .filter(t -> activeSuppliers.contains(t.getSupplierId()))
+                .map(t -> {
+                    String unit = units.codeOf(t.getPurchaseUnitId());
+                    BigDecimal perStockUnit = t.getUnitPrice()
+                            .divide(converter.factor(unit, stockUnit), MathContext.DECIMAL128)
+                            .setScale(6, RoundingMode.HALF_UP);
+                    return new ReferenceCostDTO(t.getSupplierId(), unit, t.getUnitPrice(), perStockUnit);
+                })
+                .toList();
+        return candidates.stream()
+                .filter(c -> c.supplierId().equals(item.getPreferredSupplierId()))
+                .findFirst()
+                .or(() -> candidates.stream().min(Comparator.comparing(ReferenceCostDTO::costPerStockUnit)));
     }
 
     /**

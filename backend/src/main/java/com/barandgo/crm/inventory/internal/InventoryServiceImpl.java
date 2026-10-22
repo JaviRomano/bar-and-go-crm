@@ -7,8 +7,10 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -31,6 +33,7 @@ import com.barandgo.crm.inventory.InventoryDTOs.ValuationReportDTO;
 import com.barandgo.crm.inventory.InventoryService;
 import com.barandgo.crm.inventory.MovementSource;
 import com.barandgo.crm.inventory.MovementType;
+import com.barandgo.crm.inventory.StockPostingService;
 import com.barandgo.crm.purchasing.StockItemDTO;
 import com.barandgo.crm.shared.BadRequestException;
 import com.barandgo.crm.shared.ResourceNotFoundException;
@@ -39,9 +42,13 @@ import jakarta.persistence.criteria.Predicate;
 
 @Service
 @Transactional
-public class InventoryServiceImpl implements InventoryService {
+public class InventoryServiceImpl implements InventoryService, StockPostingService {
 
     private static final Logger logger = LoggerFactory.getLogger(InventoryServiceImpl.class);
+
+    // Lo que pueden registrar otros módulos; recepción, ajustes y traspasos tienen su propio flujo
+    private static final Set<MovementType> EXTERNAL_TYPES = EnumSet.of(MovementType.PRODUCTION_CONSUMPTION,
+            MovementType.PRODUCTION_OUTPUT, MovementType.SALE, MovementType.WASTE);
 
     private final StockLedger ledger;
     private final ItemCatalog itemCatalog;
@@ -189,6 +196,28 @@ public class InventoryServiceImpl implements InventoryService {
         movements.add(out.movement());
         in.forEach(p -> movements.add(p.movement()));
         return toDTOs(movements);
+    }
+
+    @Override
+    public PostingResult post(UUID operationId, MovementType type, MovementSource source, Long sourceId,
+                              Long warehouseId, List<PostingLine> lines, String notes, CurrentUser user) {
+        if (!EXTERNAL_TYPES.contains(type)) {
+            throw new BadRequestException("Tipo de movimiento no admitido desde otros módulos: " + type);
+        }
+        if (lines.isEmpty()) {
+            throw new BadRequestException("No hay movimientos que registrar");
+        }
+        activeWarehouse(warehouseId);
+        UUID operation = operationId != null ? operationId : UUID.randomUUID();
+        List<StockLedger.Entry> entries = lines.stream()
+                .map(line -> new StockLedger.Entry(type, line.stockItemId(), warehouseId, line.quantity(),
+                        line.unitCost(), source, sourceId, null, null, notes))
+                .toList();
+        List<StockMovement> movements = ledger.post(operation, entries, user.id()).stream()
+                .map(StockLedger.Posted::movement)
+                .toList();
+        BigDecimal total = movements.stream().map(StockMovement::getTotalCost).reduce(BigDecimal.ZERO, BigDecimal::add);
+        return new PostingResult(operation, toDTOs(movements), total);
     }
 
     @Override
