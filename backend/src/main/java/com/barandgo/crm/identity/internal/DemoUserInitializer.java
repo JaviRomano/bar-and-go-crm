@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -20,6 +21,7 @@ import com.barandgo.crm.identity.UserRole;
  */
 @Component
 @Profile("dev")
+@Order(0)
 class DemoUserInitializer implements CommandLineRunner {
 
     private static final Logger logger = LoggerFactory.getLogger(DemoUserInitializer.class);
