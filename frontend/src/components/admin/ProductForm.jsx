@@ -1,26 +1,42 @@
 import { useState, useEffect } from 'react';
 import { X, Save } from 'lucide-react';
 import productService from '../../services/productService';
+import productCategoryService from '../../services/productCategoryService';
 
 const ProductForm = ({ product, onClose }) => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     price: '',
-    category: 'ENTRANTES',
+    categoryId: '',
     available: true,
     imageUrl: ''
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
-  
+  const [categories, setCategories] = useState([]);
+
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const data = await productCategoryService.getAll();
+        setCategories(data);
+        // Producto nuevo: primera categoría de la carta por defecto
+        setFormData(prev => (prev.categoryId ? prev : { ...prev, categoryId: data[0]?.id ?? '' }));
+      } catch (error) {
+        console.error('Error cargando categorías:', error);
+      }
+    };
+    loadCategories();
+  }, []);
+
   useEffect(() => {
     if (product) {
       setFormData({
         name: product.name || '',
         description: product.description || '',
         price: product.price || '',
-        category: product.category || 'ENTRANTES',
+        categoryId: product.categoryId ?? '',
         available: product.available ?? true,
         imageUrl: product.imageUrl || ''
       });
@@ -38,8 +54,8 @@ const ProductForm = ({ product, onClose }) => {
       newErrors.price = 'El precio debe ser mayor que 0';
     }
     
-    if (!formData.category) {
-      newErrors.category = 'La categoría es obligatoria';
+    if (!formData.categoryId) {
+      newErrors.categoryId = 'La categoría es obligatoria';
     }
     
     setErrors(newErrors);
@@ -56,7 +72,8 @@ const ProductForm = ({ product, onClose }) => {
     try {
       const data = {
         ...formData,
-        price: parseFloat(formData.price)
+        price: parseFloat(formData.price),
+        categoryId: Number(formData.categoryId)
       };
       
       if (product) {
@@ -185,17 +202,16 @@ const ProductForm = ({ product, onClose }) => {
             <div className="input-group">
               <label>Categoría *</label>
               <select
-                name="category"
-                value={formData.category}
+                name="categoryId"
+                value={formData.categoryId}
                 onChange={handleChange}
                 required
               >
-                <option value="ENTRANTES">Entrantes</option>
-                <option value="PRINCIPALES">Principales</option>
-                <option value="POSTRES">Postres</option>
-                <option value="BEBIDAS">Bebidas</option>
+                {categories.map(category => (
+                  <option key={category.id} value={category.id}>{category.name}</option>
+                ))}
               </select>
-              {errors.category && <span className="error-message">{errors.category}</span>}
+              {errors.categoryId && <span className="error-message">{errors.categoryId}</span>}
             </div>
           </div>
           

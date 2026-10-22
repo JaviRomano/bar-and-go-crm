@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Calendar, Clock, Users, Phone, CheckCircle, XCircle, Trash2 } from 'lucide-react';
 import reservationService from '../../services/reservationService';
+import { useAuth } from '../../context/useAuth';
 import { RESERVATION_STATUS_LABELS } from '../../utils/constants';
 import { formatTime } from '../../utils/dates';
 
 const ReservationList = () => {
+  const { canManage } = useAuth();
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('TODOS');
@@ -252,14 +254,16 @@ const ReservationList = () => {
                   </button>
                 )}
                 
-                <button
-                  onClick={() => handleDelete(reservation.id)}
-                  className="btn btn-danger"
-                  style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
-                >
-                  <Trash2 size={16} />
-                  Eliminar
-                </button>
+                {canManage() && (
+                  <button
+                    onClick={() => handleDelete(reservation.id)}
+                    className="btn btn-danger"
+                    style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
+                  >
+                    <Trash2 size={16} />
+                    Eliminar
+                  </button>
+                )}
               </div>
             </div>
           </div>

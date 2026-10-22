@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
 import { LogIn, User, Lock } from 'lucide-react';
-import { SHOW_DEMO_LOGIN, USER_ROLES } from '../../utils/constants';
+import { SHOW_DEMO_LOGIN, USER_ROLES, homePathFor } from '../../utils/constants';
 
 const DEMO_CREDENTIALS = {
   ADMIN: { email: 'admin@bar.com', password: 'admin123' },
+  MANAGER: { email: 'encargado@bar.com', password: 'encargado123' },
+  STAFF: { email: 'personal@bar.com', password: 'personal123' },
   CUSTOMER: { email: 'ripleynostromo@example.com', password: 'cliente123' }
 };
 
@@ -38,7 +40,7 @@ const Login = () => {
   };
   
   const redirectByRole = (user) => {
-    navigate(user.role === USER_ROLES.ADMIN ? '/admin' : '/cliente');
+    navigate(homePathFor(user.role));
   };
   
   // Acceso rápido con las credenciales de demo
@@ -142,6 +144,22 @@ const Login = () => {
               <button
                 type="button"
                 className="btn btn-outline"
+                onClick={() => quickLogin(USER_ROLES.MANAGER)}
+                style={{ fontSize: '0.875rem' }}
+              >
+                Encargado
+              </button>
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={() => quickLogin(USER_ROLES.STAFF)}
+                style={{ fontSize: '0.875rem' }}
+              >
+                Personal
+              </button>
+              <button
+                type="button"
+                className="btn btn-outline"
                 onClick={() => quickLogin(USER_ROLES.CUSTOMER)}
                 style={{ fontSize: '0.875rem' }}
               >
@@ -150,6 +168,8 @@ const Login = () => {
             </div>
             <div style={{ marginTop: '1rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
               <p><strong>Admin:</strong> admin@bar.com / admin123</p>
+              <p><strong>Encargado:</strong> encargado@bar.com / encargado123</p>
+              <p><strong>Personal:</strong> personal@bar.com / personal123</p>
               <p><strong>Cliente:</strong> ripleynostromo@example.com / cliente123</p>
             </div>
           </div>

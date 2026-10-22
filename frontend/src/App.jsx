@@ -7,6 +7,7 @@ import Login from './components/auth/Login';
 import HomePage from './pages/HomePage';
 import AdminDashboard from './pages/AdminDashboard';
 import NotFound from './pages/NotFound';
+import { BACK_OFFICE_ROLES, MANAGEMENT_ROLES, USER_ROLES } from './utils/constants';
 
 // Componentes Admin
 import ProductList from './components/admin/ProductList';
@@ -46,7 +47,7 @@ function App() {
               <Route
                 path="/admin"
                 element={
-                  <ProtectedRoute requiredRole="ADMIN">
+                  <ProtectedRoute allowedRoles={BACK_OFFICE_ROLES}>
                     <AdminDashboard />
                   </ProtectedRoute>
                 }
@@ -54,7 +55,7 @@ function App() {
               <Route
                 path="/admin/products"
                 element={
-                  <ProtectedRoute requiredRole="ADMIN">
+                  <ProtectedRoute allowedRoles={MANAGEMENT_ROLES}>
                     <ProductList />
                   </ProtectedRoute>
                 }
@@ -62,7 +63,7 @@ function App() {
               <Route
                 path="/admin/reservations"
                 element={
-                  <ProtectedRoute requiredRole="ADMIN">
+                  <ProtectedRoute allowedRoles={BACK_OFFICE_ROLES}>
                     <ReservationList />
                   </ProtectedRoute>
                 }
@@ -70,7 +71,7 @@ function App() {
               <Route
                 path="/admin/orders"
                 element={
-                  <ProtectedRoute requiredRole="ADMIN">
+                  <ProtectedRoute allowedRoles={BACK_OFFICE_ROLES}>
                     <OrderList />
                   </ProtectedRoute>
                 }
@@ -80,7 +81,7 @@ function App() {
               <Route
                 path="/cliente"
                 element={
-                  <ProtectedRoute requiredRole="CUSTOMER">
+                  <ProtectedRoute allowedRoles={[USER_ROLES.CUSTOMER]}>
                     <Menu />
                   </ProtectedRoute>
                 }
@@ -88,7 +89,7 @@ function App() {
               <Route
                 path="/cliente/reservations/new"
                 element={
-                  <ProtectedRoute requiredRole="CUSTOMER">
+                  <ProtectedRoute allowedRoles={[USER_ROLES.CUSTOMER]}>
                     <ReservationForm />
                   </ProtectedRoute>
                 }
@@ -96,7 +97,7 @@ function App() {
               <Route
                 path="/cliente/reservations"
                 element={
-                  <ProtectedRoute requiredRole="CUSTOMER">
+                  <ProtectedRoute allowedRoles={[USER_ROLES.CUSTOMER]}>
                     <MyReservations />
                   </ProtectedRoute>
                 }
@@ -104,7 +105,7 @@ function App() {
               <Route
                 path="/cliente/orders"
                 element={
-                  <ProtectedRoute requiredRole="CUSTOMER">
+                  <ProtectedRoute allowedRoles={[USER_ROLES.CUSTOMER]}>
                     <MyOrders />
                   </ProtectedRoute>
                 }
@@ -112,7 +113,7 @@ function App() {
               <Route
                 path="/cliente/checkout"
                 element={
-                  <ProtectedRoute requiredRole="CUSTOMER">
+                  <ProtectedRoute allowedRoles={[USER_ROLES.CUSTOMER]}>
                     <Checkout />
                   </ProtectedRoute>
                 }

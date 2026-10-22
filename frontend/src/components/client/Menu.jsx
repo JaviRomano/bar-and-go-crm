@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { ShoppingCart, Plus, Minus, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import productService from '../../services/productService';
-import { PRODUCT_CATEGORIES } from '../../utils/constants';
+import productCategoryService from '../../services/productCategoryService';
 
 const Menu = () => {
   const [products, setProducts] = useState([]);
@@ -10,12 +10,23 @@ const Menu = () => {
   const [selectedCategory, setSelectedCategory] = useState('TODOS');
   const [loading, setLoading] = useState(true);
   const [showCart, setShowCart] = useState(false);
+  const [categoryNames, setCategoryNames] = useState([]);
   const navigate = useNavigate();
   
   useEffect(() => {
     loadProducts();
+    loadCategories();
     loadCart();
   }, []);
+
+  const loadCategories = async () => {
+    try {
+      const data = await productCategoryService.getAll();
+      setCategoryNames(data.map(category => category.name));
+    } catch (error) {
+      console.error('Error cargando categorías:', error);
+    }
+  };
   
   const loadProducts = async () => {
     try {
@@ -93,7 +104,7 @@ const Menu = () => {
     ? products
     : products.filter(p => p.category === selectedCategory);
   
-  const categories = ['TODOS', ...Object.values(PRODUCT_CATEGORIES)];
+  const categories = ['TODOS', ...categoryNames];
   
   if (loading) {
     return (

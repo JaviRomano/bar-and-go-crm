@@ -170,13 +170,15 @@ El test original (`contextLoads`) necesitaba un PostgreSQL local, así que `mvnw
 | `backend/mvnw` con bit ejecutable en git | Clonado en Linux o en CI, `./mvnw` fallaba por permisos |
 | Node.js 22.11 a 22.23.2 en el entorno local | Vite 7 requiere 22.12 o superior |
 | README reescrito, guía de arranque y este documento | El README original tenía una línea |
+| Guía de arranque con comandos para Windows PowerShell 5.1 además de bash | Esa versión de PowerShell no admite `&&` ni la sintaxis `VAR=valor comando`, así que los comandos de bash fallaban al pegarlos |
 
 ## Verificación
 
 - Backend: `./mvnw verify` con 44 tests y 0 fallos, incluida la integración contra PostgreSQL 17.
 - Frontend: `npm run lint` sin errores ni avisos y `npm run build` correcto.
 - Despliegue local de producción (jar con `prod`, build de Vite servido con `vite preview` y PostgreSQL en Docker): recorrido de 21 casos en Chrome, todos correctos, sin errores ni avisos en el log del backend. Se ejecutó dos veces: con la API en URL absoluta (CORS) y a través del proxy de `/api`, este último con el CORS del backend en su valor por defecto.
-- Configuración para el túnel, comprobada con la cabecera `Host`: un dominio `*.trycloudflare.com` se admite (200) y uno desconocido se rechaza (403). Un login con el `Origin` del túnel funciona a través del proxy y se rechaza si va directo al backend.
+- Configuración para el túnel, comprobada primero en local con la cabecera `Host`: un dominio `*.trycloudflare.com` se admite (200) y uno desconocido se rechaza (403). Un login con el `Origin` del túnel funciona a través del proxy y se rechaza si va directo al backend.
+- Acceso remoto real con Cloudflare Quick Tunnel (`cloudflared` 2026.9.1, siguiendo el apartado 8 de la guía de arranque). Desde la URL pública `https://<nombre>.trycloudflare.com`, la página de login y `/api/products` responden 200, un login de demo devuelve el token con rol `CUSTOMER`, y el bundle servido usa la ruta relativa `/api`.
 
 ## Pendiente
 

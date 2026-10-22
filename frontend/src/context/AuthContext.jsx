@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import authService from '../services/authService';
 import { AuthContext } from './auth-context';
-import { USER_ROLES } from '../utils/constants';
+import { BACK_OFFICE_ROLES, MANAGEMENT_ROLES, USER_ROLES } from '../utils/constants';
 
 export const AuthProvider = ({ children }) => {
   // Lectura síncrona de la sesión guardada: evita un render intermedio sin usuario
@@ -21,13 +21,19 @@ export const AuthProvider = ({ children }) => {
   const isAdmin = () => user?.role === USER_ROLES.ADMIN;
   
   const isCustomer = () => user?.role === USER_ROLES.CUSTOMER;
+
+  const isBackOffice = () => BACK_OFFICE_ROLES.includes(user?.role);
+
+  const canManage = () => MANAGEMENT_ROLES.includes(user?.role);
   
   const value = {
     user,
     login,
     logout,
     isAdmin,
-    isCustomer
+    isCustomer,
+    isBackOffice,
+    canManage
   };
   
   return (
