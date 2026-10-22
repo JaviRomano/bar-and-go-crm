@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -21,6 +22,29 @@ import MyReservations from './components/client/MyReservations';
 import MyOrders from './components/client/MyOrders';
 import Checkout from './components/client/Checkout';
 
+// Gestión (back-office ERP): se carga al entrar, no forma parte del bundle inicial
+const SuppliersPage = lazy(() => import('./gestion/pages/SuppliersPage'));
+const StockItemsPage = lazy(() => import('./gestion/pages/StockItemsPage'));
+const PurchaseOrdersPage = lazy(() => import('./gestion/pages/PurchaseOrdersPage'));
+const GoodsReceiptPage = lazy(() => import('./gestion/pages/GoodsReceiptPage'));
+const InventoryPage = lazy(() => import('./gestion/pages/InventoryPage'));
+const StockCountsPage = lazy(() => import('./gestion/pages/StockCountsPage'));
+const RecipesPage = lazy(() => import('./gestion/pages/RecipesPage'));
+const WastePage = lazy(() => import('./gestion/pages/WastePage'));
+const ReportsPage = lazy(() => import('./gestion/pages/ReportsPage'));
+
+const GESTION_ROUTES = [
+  { path: 'proveedores', element: <SuppliersPage />, roles: MANAGEMENT_ROLES },
+  { path: 'articulos', element: <StockItemsPage />, roles: BACK_OFFICE_ROLES },
+  { path: 'compras', element: <PurchaseOrdersPage />, roles: MANAGEMENT_ROLES },
+  { path: 'recepcion', element: <GoodsReceiptPage />, roles: BACK_OFFICE_ROLES },
+  { path: 'inventario', element: <InventoryPage />, roles: BACK_OFFICE_ROLES },
+  { path: 'recuentos', element: <StockCountsPage />, roles: BACK_OFFICE_ROLES },
+  { path: 'escandallos', element: <RecipesPage />, roles: BACK_OFFICE_ROLES },
+  { path: 'mermas', element: <WastePage />, roles: BACK_OFFICE_ROLES },
+  { path: 'informes', element: <ReportsPage />, roles: MANAGEMENT_ROLES }
+];
+
 function App() {
   return (
     <Router>
@@ -34,8 +58,9 @@ function App() {
 
           <main style={{
             flex: 1,
-            backgroundColor: 'var(--light-bg)'
+            backgroundColor: 'var(--bg)'
           }}>
+            <Suspense fallback={<div className="spinner" role="status" aria-label="Cargando" />}>
             <Routes>
               {/* Ruta pública */}
               <Route path="/login" element={<Login />} />
@@ -76,6 +101,14 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+
+              {GESTION_ROUTES.map(({ path, element, roles }) => (
+                <Route
+                  key={path}
+                  path={`/admin/gestion/${path}`}
+                  element={<ProtectedRoute allowedRoles={roles}>{element}</ProtectedRoute>}
+                />
+              ))}
 
               {/* Rutas Cliente */}
               <Route
@@ -122,6 +155,7 @@ function App() {
               {/* 404 */}
               <Route path="*" element={<NotFound />} />
             </Routes>
+            </Suspense>
           </main>
 
           <Footer />

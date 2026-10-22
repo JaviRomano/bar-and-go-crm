@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react';
 import { Clock, User, Package, DollarSign } from 'lucide-react';
 import orderService from '../../services/orderService';
+import ConfirmModal from '../common/ConfirmModal';
+import { useAuth } from '../../context/useAuth';
 import { ORDER_STATUS, ORDER_STATUS_LABELS, PAYMENT_METHOD_LABELS } from '../../utils/constants';
 
 const OrderList = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('TODOS');
+  const [confirm, setConfirm] = useState(null);
+  const { canManage } = useAuth();
   
   useEffect(() => {
     loadOrders();
@@ -26,13 +30,34 @@ const OrderList = () => {
     }
   };
   
-  const handleUpdateStatus = async (id, newStatus) => {
+  const updateStatus = async (id, newStatus) => {
     try {
       await orderService.updateStatus(id, newStatus);
       await loadOrders();
     } catch (error) {
       console.error('Error actualizando estado:', error);
-      alert('Error al actualizar estado');
+      alert(error.response?.data?.message || 'Error al actualizar estado');
+    }
+  };
+
+  // Entregar descuenta stock según los escandallos y cancelar un entregado lo devuelve: se confirman
+  const handleUpdateStatus = (order, newStatus) => {
+    if (newStatus === ORDER_STATUS.DELIVERED) {
+      setConfirm({
+        title: `Entregar pedido #${order.id}`,
+        message: 'Al marcarlo como entregado se descuentan del almacén de ventas los ingredientes de sus escandallos.',
+        confirmText: 'Entregar',
+        onConfirm: () => updateStatus(order.id, newStatus)
+      });
+    } else if (order.status === ORDER_STATUS.DELIVERED) {
+      setConfirm({
+        title: `Cancelar pedido entregado #${order.id}`,
+        message: 'El pedido ya movió stock: al cancelarlo se devuelven al almacén los ingredientes descontados.',
+        confirmText: 'Cancelar pedido',
+        onConfirm: () => updateStatus(order.id, newStatus)
+      });
+    } else {
+      updateStatus(order.id, newStatus);
     }
   };
   
@@ -154,7 +179,7 @@ const OrderList = () => {
               <div style={{ 
                 fontSize: '1.5rem',
                 fontWeight: 'bold',
-                color: '#10b981'
+                color: 'var(--ok)'
               }}>
                 €{order.total.toFixed(2)}
               </div>
@@ -205,10 +230,10 @@ const OrderList = () => {
               gap: '0.5rem',
               marginBottom: '1rem',
               padding: '0.75rem',
-              backgroundColor: '#dbeafe',
-              borderRadius: '0.5rem'
+              backgroundColor: 'var(--info-soft)',
+              borderRadius: 'var(--r-sm)'
             }}>
-              <Clock size={20} color="#2563eb" />
+              <Clock size={20} color="var(--info)" />
               <span>
                 <strong>Hora de recogida:</strong>{' '}
                 {new Date(order.timeTakeAway).toLocaleString('es-ES')}
@@ -218,7 +243,7 @@ const OrderList = () => {
             </div>
             
             {/* Acciones */}
-            {order.status !== 'DELIVERED' && order.status !== 'CANCELLED' && (
+            {(order.status !== 'DELIVERED' || canManage()) && order.status !== 'CANCELLED' && (
               <div style={{ 
                 display: 'flex',
                 gap: '0.5rem',
@@ -227,7 +252,7 @@ const OrderList = () => {
               }}>
                 {getNextStatus(order.status) && (
                   <button
-                    onClick={() => handleUpdateStatus(order.id, getNextStatus(order.status))}
+                    onClick={() => handleUpdateStatus(order, getNextStatus(order.status))}
                     className="btn btn-primary"
                     style={{ flex: 1 }}
                   >
@@ -236,7 +261,7 @@ const OrderList = () => {
                 )}
                 
                 <button
-                  onClick={() => handleUpdateStatus(order.id, ORDER_STATUS.CANCELLED)}
+                  onClick={() => handleUpdateStatus(order, ORDER_STATUS.CANCELLED)}
                   className="btn btn-danger"
                   style={{ flex: 1 }}
                 >
@@ -257,6 +282,18 @@ const OrderList = () => {
           No hay pedidos con este estado
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={!!confirm}
+        onClose={() => setConfirm(null)}
+        title={confirm?.title}
+        message={confirm?.message}
+        type="warning"
+        confirmText={confirm?.confirmText}
+        showCancel
+        cancelText="Volver"
+        onConfirm={confirm?.onConfirm}
+      />
     </div>
   );
 };
