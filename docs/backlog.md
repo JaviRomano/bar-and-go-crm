@@ -30,3 +30,9 @@ Puntos detectados fuera del alcance de la fase en curso. Se priorizan cuando se 
 - **Devolución a proveedor** sigue pendiente (ver Fase 0): hoy una devolución se registra como ajuste negativo, sin documento propio ni efecto en el pedido.
 - **Recuento con actividad**: el cierre asume que se ha contado con el almacén parado. Para contar en marcha haría falta fijar un corte y descontar los movimientos posteriores.
 - **Listados sin paginar** (artículos, pedidos, albaranes, recuentos, movimientos). Suficiente para un local; si crecen, paginación en servidor.
+
+## Detectado en la Fase 4
+
+- **Registro persistente de eventos** (Spring Modulith JDBC): hoy un recálculo de coste se perdería si la aplicación cae justo después del cambio de precio. Se introduce en la Fase 5 junto al descuento de stock por venta.
+- **Alérgenos en la carta pública** se calculan en cada petición (carga artículos y escandallos). Suficiente con decenas de productos; con más, guardarlos al recalcular el escandallo.
+- **Escandallos demo simplificados**: faltan artículos como el pan, así que los food cost demo salen bajos.

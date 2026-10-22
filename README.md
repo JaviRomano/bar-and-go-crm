@@ -25,12 +25,13 @@ El backend es un monolito modular ([Spring Modulith](https://spring.io/projects/
 |---|---|---|
 | `shared` | Excepciones y su traducción a respuestas HTTP | — |
 | `identity` | Usuarios, roles, JWT, reglas de acceso | shared |
-| `catalog` | Carta: productos y categorías | shared |
+| `catalog` | Carta: productos, categorías, IVA de venta y alérgenos | shared, masterdata |
 | `ordering` | Pedidos para recoger | shared, identity, catalog |
 | `reservations` | Reservas de mesa | shared, identity |
 | `masterdata` | Unidades de medida, proveedores, categorías de compra, tipos de IVA, alérgenos | shared |
 | `purchasing` | Artículos de compra, precios por proveedor, pedidos a proveedor | shared, identity, masterdata |
 | `inventory` | Almacenes, movimientos de stock (inmutables), PMP, lotes, recepción de albaranes, recuentos, reposición | shared, identity, masterdata, purchasing |
+| `recipes` | Escandallos, sub-escandallos, food cost, alérgenos de cada plato, producción de elaboraciones | shared, identity, masterdata, purchasing, catalog, inventory |
 
 `./mvnw test` genera además los diagramas de módulos (PlantUML/C4) en `backend/target/spring-modulith-docs`.
 
@@ -47,7 +48,7 @@ El proyecto está creciendo de CRM a back-office de restauración: compras, inve
 | 1.5 | Monolito modular con Spring Modulith | Hecha |
 | 2 | Artículos de compra, tipos de IVA, precios por proveedor, pedidos a proveedor | Hecha |
 | 3 | Almacenes, movimientos de stock, valoración PMP, recepción de albaranes, recuentos | Hecha |
-| 4 | Escandallos y producción | Pendiente |
+| 4 | Escandallos y producción | Hecha |
 | 5 | Mermas, descuento de stock por venta, consumo teórico frente a real | Pendiente |
 | 6 | Informes y pantallas de gestión | Pendiente |
 
@@ -122,7 +123,7 @@ Solo existen con el perfil `dev`. Son públicas a propósito para poder probar l
 
 Se pueden cambiar con `DEMO_ADMIN_PASSWORD`, `DEMO_MANAGER_PASSWORD`, `DEMO_STAFF_PASSWORD` y `DEMO_CUSTOMER_PASSWORD`.
 
-Con `dev` se cargan también datos demo del ERP: proveedores, 13 artículos de compra con tarifa, 4 almacenes y stock con lotes procedente de tres pedidos recibidos (uno en parte). Detalle en [docs/erp/03-inventario.md](docs/erp/03-inventario.md).
+Con `dev` se cargan también datos demo del ERP: proveedores, 13 artículos de compra con tarifa, 4 almacenes y stock con lotes procedente de tres pedidos recibidos (uno en parte), y escandallos de la carta demo con una salsa elaborada en stock. Detalle en [docs/erp/03-inventario.md](docs/erp/03-inventario.md) y [docs/erp/04-escandallos.md](docs/erp/04-escandallos.md).
 
 ## Autenticación
 
@@ -147,7 +148,7 @@ El registro público (`POST /api/auth/register`) siempre crea usuarios `CUSTOMER
 |---|---|---|
 | `ADMIN` | Administración | Todo, incluida la configuración (unidades de medida) y la gestión de encargados |
 | `MANAGER` | Encargado | Lo mismo que STAFF, más carta, proveedores, borrado de pedidos y reservas, y alta de personal y clientes |
-| `STAFF` | Trabajador | Panel de pedidos y reservas; consulta de proveedores, categorías de compra, artículos y stock (sin precios ni costes); recepción de mercancía, traspasos y recuentos |
+| `STAFF` | Trabajador | Panel de pedidos y reservas; consulta de proveedores, categorías de compra, artículos y stock (sin precios ni costes); recepción de mercancía, traspasos y recuentos; escandallos sin costes y producción de elaboraciones |
 | `CUSTOMER` | Cliente | Carta, sus pedidos y sus reservas |
 
 Los permisos son jerárquicos: ADMIN incluye los de MANAGER y MANAGER los de STAFF. El personal puede llevar etiquetas de puesto (`KITCHEN`, `FLOOR`, `BAR`, `DISHWASHING`), que son informativas y no dan permisos. Las rutas sin regla explícita se deniegan.
@@ -161,7 +162,7 @@ Leyenda de acceso: **público** (sin token), **auth** (cualquier usuario autenti
 | POST | `/api/auth/login` | público | Inicio de sesión |
 | POST | `/api/auth/register` | público | Alta de cliente |
 | GET | `/api/auth/me` | auth | Usuario autenticado |
-| GET | `/api/products`, `/available`, `/{id}`, `/category/{c}` | público | Carta |
+| GET | `/api/products`, `/available`, `/{id}`, `/category/{c}` | público | Carta, con IVA y alérgenos de cada producto |
 | POST, PUT, PATCH, DELETE | `/api/products/**` | MANAGER | Gestión de la carta. `DELETE` archiva el producto si ya tiene ventas |
 | GET | `/api/product-categories?includeInactive=` | público | Categorías de la carta, en orden |
 | POST, PUT, DELETE | `/api/product-categories/**` | MANAGER | Gestión de categorías. No se borra una categoría con productos |
@@ -208,6 +209,10 @@ Leyenda de acceso: **público** (sin token), **auth** (cualquier usuario autenti
 | GET | `/api/goods-receipts?supplierId=`, `/{id}` | MANAGER | Albaranes recibidos |
 | POST | `/api/stock-counts`, `/{id}/close` | MANAGER | Abrir y cerrar recuentos; al cerrar se ajustan las diferencias |
 | GET, PUT | `/api/stock-counts`, `/{id}`, `/{id}/lines` | STAFF | Consultar y registrar cantidades contadas (sin ver el teórico) |
+| GET | `/api/recipes?type=`, `/{id}` | STAFF | Escandallos con coste, food cost, margen, PVP sugerido y alérgenos (sin costes para el personal) |
+| POST, PUT | `/api/recipes/**` | MANAGER | Alta y edición; se rechazan ciclos de sub-escandallos |
+| GET, POST | `/api/recipes/{id}/cost-history`, `/recalculate` | MANAGER | Histórico de coste y recálculo completo |
+| POST | `/api/recipes/{id}/production` | STAFF | Producir una elaboración: consume ingredientes y da de alta el resultado al coste real |
 
 Los errores tienen siempre la misma forma:
 
@@ -245,7 +250,7 @@ cd backend
 |---|---|
 | Unitarios (Mockito y JUnit) | Servicios de pedidos, reservas, autenticación, usuarios, productos y unidades; conversión de unidades; validación de CIF/NIF/NIE; horario de reservas; tokens |
 | Slice web (`@WebMvcTest`) | Reglas de autorización por rol y ruta, jerarquía de roles; CORS |
-| Integración (Testcontainers) | Flujos completos contra PostgreSQL con el esquema de Flyway: pedidos, roles, proveedores, archivado de productos, bloqueo optimista, compras (artículo, tarifa, pedido a proveedor y su ciclo de vida), inventario (recepción, PMP, lotes, traspasos, recuento, reposición, inmutabilidad del ledger) |
+| Integración (Testcontainers) | Flujos completos contra PostgreSQL con el esquema de Flyway: pedidos, roles, proveedores, archivado de productos, bloqueo optimista, compras (artículo, tarifa, pedido a proveedor y su ciclo de vida), inventario (recepción, PMP, lotes, traspasos, recuento, reposición, inmutabilidad del ledger), escandallos (coste, food cost, alérgenos, ciclos, producción, recálculo por evento) |
 | Migraciones (Testcontainers + Flyway) | Migración de datos existentes (categorías, enlace pedido-producto) y adopción de una BD anterior a Flyway |
 | Modularidad (Spring Modulith) | Fronteras entre módulos y dependencias declaradas; genera la documentación de módulos |
 
