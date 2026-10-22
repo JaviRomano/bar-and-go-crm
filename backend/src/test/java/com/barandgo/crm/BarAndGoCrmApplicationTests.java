@@ -28,13 +28,13 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
-import com.barandgo.crm.entity.Product;
-import com.barandgo.crm.entity.User;
-import com.barandgo.crm.enums.UserRole;
-import com.barandgo.crm.repository.ProductCategoryRepository;
-import com.barandgo.crm.repository.ProductRepository;
-import com.barandgo.crm.repository.UserRepository;
-import com.barandgo.crm.security.TokenService;
+import com.barandgo.crm.catalog.Product;
+import com.barandgo.crm.identity.User;
+import com.barandgo.crm.identity.UserRole;
+import com.barandgo.crm.catalog.internal.ProductCategoryRepository;
+import com.barandgo.crm.catalog.internal.ProductRepository;
+import com.barandgo.crm.identity.internal.UserRepository;
+import com.barandgo.crm.identity.internal.TokenService;
 import com.jayway.jsonpath.JsonPath;
 
 /**

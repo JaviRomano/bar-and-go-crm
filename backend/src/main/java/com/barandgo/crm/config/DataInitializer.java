@@ -8,14 +8,14 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
-import com.barandgo.crm.entity.Product;
-import com.barandgo.crm.entity.ProductCategory;
-import com.barandgo.crm.entity.User;
-import com.barandgo.crm.enums.StaffTag;
-import com.barandgo.crm.enums.UserRole;
-import com.barandgo.crm.repository.ProductCategoryRepository;
-import com.barandgo.crm.repository.ProductRepository;
-import com.barandgo.crm.repository.UserRepository;
+import com.barandgo.crm.catalog.Product;
+import com.barandgo.crm.catalog.internal.ProductCategory;
+import com.barandgo.crm.identity.User;
+import com.barandgo.crm.identity.StaffTag;
+import com.barandgo.crm.identity.UserRole;
+import com.barandgo.crm.catalog.internal.ProductCategoryRepository;
+import com.barandgo.crm.catalog.internal.ProductRepository;
+import com.barandgo.crm.identity.internal.UserRepository;
 
 import java.math.BigDecimal;
 import java.util.Map;
