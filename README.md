@@ -1,6 +1,6 @@
 # Bar&Go CRM
 
-Aplicación de gestión para un bar-restaurante: carta, pedidos para recoger, reservas de mesa y clientes. Monorepo con una API REST en Spring Boot y un cliente web en React.
+Aplicación de gestión para un bar-restaurante: carta, pedidos para recoger, reservas de mesa, clientes y personal, con una ampliación ERP en curso. Monorepo con una API REST en Spring Boot y un cliente web en React.
 
 | Capa | Tecnología |
 |---|---|
@@ -32,7 +32,22 @@ El backend es un monolito modular ([Spring Modulith](https://spring.io/projects/
 
 `./mvnw test` genera además los diagramas de módulos (PlantUML/C4) en `backend/target/spring-modulith-docs`.
 
-Documentación adicional: [guía de arranque](docs/GUIA-ARRANQUE.md) (paso a paso, despliegue de prueba y problemas frecuentes) y [registro de cambios y motivos](docs/CAMBIOS.md).
+Documentación adicional: [guía de arranque](docs/GUIA-ARRANQUE.md) (paso a paso en bash y PowerShell, despliegue de prueba, acceso remoto por túnel y problemas frecuentes), [registro de cambios y motivos](docs/CAMBIOS.md) y [documentación de la ampliación ERP](docs/erp/).
+
+## Ampliación ERP (en curso)
+
+El proyecto está creciendo de CRM a back-office de restauración: compras, inventario, escandallos, mermas e informes de coste. Se desarrolla por fases, cada una documentada en [docs/erp](docs/erp/).
+
+| Fase | Contenido | Estado |
+|---|---|---|
+| 0 | Auditoría, modelo de dominio y decisiones | Hecha |
+| 1 | Flyway, roles de encargado y personal, unidades de medida, proveedores, categorías | Hecha |
+| 1.5 | Monolito modular con Spring Modulith | Hecha |
+| 2 | Artículos de compra, tipos de IVA, precios por proveedor, pedidos a proveedor | Pendiente |
+| 3 | Almacenes, movimientos de stock, valoración PMP, recepción de albaranes, recuentos | Pendiente |
+| 4 | Escandallos y producción | Pendiente |
+| 5 | Mermas, descuento de stock por venta, consumo teórico frente a real | Pendiente |
+| 6 | Informes y pantallas de gestión | Pendiente |
 
 ## Puesta en marcha
 
@@ -81,6 +96,16 @@ VITE_API_BASE_URL=https://tu-dominio/api npm run build
 ```
 
 El esquema se crea o actualiza al arrancar, también en `prod`.
+
+### Acceso remoto para pruebas
+
+Para probar la aplicación desde otro dispositivo por internet sin desplegarla, se publica el servidor de preview de Vite con un túnel (Cloudflare Quick Tunnel o ngrok). Vite reenvía `/api` al backend, así que basta un solo túnel y el backend no se expone:
+
+```
+navegador remoto --HTTPS--> túnel --> vite preview :4173 --/api--> backend :8080
+```
+
+Requiere compilar el frontend con `VITE_API_BASE_URL=/api` y arrancar el preview con `VITE_ALLOWED_HOSTS=.trycloudflare.com`. Los pasos completos están en el [apartado 8 de la guía de arranque](docs/GUIA-ARRANQUE.md#8-acceso-desde-otro-equipo-por-internet). La URL del túnel es pública mientras esté activo, y las credenciales de demo también lo son.
 
 ### Credenciales de demo
 
