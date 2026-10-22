@@ -25,7 +25,7 @@ import com.barandgo.crm.reservations.ReservationStatus;
 import com.barandgo.crm.identity.UserRole;
 import com.barandgo.crm.shared.BadRequestException;
 import com.barandgo.crm.shared.ForbiddenException;
-import com.barandgo.crm.identity.internal.UserRepository;
+import com.barandgo.crm.identity.UserDirectory;
 import com.barandgo.crm.identity.CurrentUser;
 
 @ExtendWith(MockitoExtension.class)
@@ -38,7 +38,7 @@ class ReservationServiceImplTest {
     private ReservationRepository reservationRepository;
 
     @Mock
-    private UserRepository userRepository;
+    private UserDirectory userDirectory;
 
     @InjectMocks
     private ReservationServiceImpl reservationService;
@@ -70,7 +70,7 @@ class ReservationServiceImplTest {
     @Test
     void customerCanCancelOwnReservation() {
         when(reservationRepository.findById(1L)).thenReturn(Optional.of(reservation(1L, "+34600000001")));
-        when(userRepository.findById(5L)).thenReturn(Optional.of(user(5L, "+34600000001")));
+        when(userDirectory.getUser(5L)).thenReturn(user(5L, "+34600000001"));
         when(reservationRepository.save(any(Reservation.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         CurrentUser owner = new CurrentUser(5L, "ana@example.com", UserRole.CUSTOMER);
@@ -82,7 +82,7 @@ class ReservationServiceImplTest {
     @Test
     void customerCannotCancelSomeoneElsesReservation() {
         when(reservationRepository.findById(1L)).thenReturn(Optional.of(reservation(1L, "+34600000001")));
-        when(userRepository.findById(6L)).thenReturn(Optional.of(user(6L, "+34699999999")));
+        when(userDirectory.getUser(6L)).thenReturn(user(6L, "+34699999999"));
 
         CurrentUser stranger = new CurrentUser(6L, "otro@example.com", UserRole.CUSTOMER);
 

@@ -6,13 +6,13 @@ import com.barandgo.crm.ordering.OrderRequestDTO;
 import com.barandgo.crm.ordering.OrderResponseDTO;
 import com.barandgo.crm.ordering.OrderUpdateStatusDTO;
 import com.barandgo.crm.catalog.Product;
+import com.barandgo.crm.catalog.ProductService;
 import com.barandgo.crm.identity.User;
+import com.barandgo.crm.identity.UserDirectory;
 import com.barandgo.crm.ordering.OrderStatus;
 import com.barandgo.crm.shared.BadRequestException;
 import com.barandgo.crm.shared.ForbiddenException;
 import com.barandgo.crm.shared.ResourceNotFoundException;
-import com.barandgo.crm.catalog.internal.ProductRepository;
-import com.barandgo.crm.identity.internal.UserRepository;
 import com.barandgo.crm.identity.CurrentUser;
 import com.barandgo.crm.ordering.OrderService;
 import org.slf4j.Logger;
@@ -31,20 +31,19 @@ public class OrderServiceImpl implements OrderService {
     private static final Logger logger = LoggerFactory.getLogger(OrderServiceImpl.class);
 
     private final OrderRepository orderRepository;
-    private final UserRepository userRepository;
-    private final ProductRepository productRepository;
+    private final UserDirectory userDirectory;
+    private final ProductService productService;
 
-    public OrderServiceImpl(OrderRepository orderRepository, UserRepository userRepository,
-                            ProductRepository productRepository) {
+    public OrderServiceImpl(OrderRepository orderRepository, UserDirectory userDirectory,
+                            ProductService productService) {
         this.orderRepository = orderRepository;
-        this.userRepository = userRepository;
-        this.productRepository = productRepository;
+        this.userDirectory = userDirectory;
+        this.productService = productService;
     }
 
     @Override
     public OrderResponseDTO createOrder(Long userId, OrderRequestDTO orderRequestDTO) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con ID: " + userId));
+        User user = userDirectory.getUser(userId);
 
         if (orderRequestDTO.getTimeTakeAway().isBefore(LocalDateTime.now())) {
             throw new BadRequestException("La hora de recogida debe ser futura");
@@ -61,13 +60,8 @@ public class OrderServiceImpl implements OrderService {
 
         BigDecimal total = BigDecimal.ZERO;
         for (OrderItemRequestDTO itemDTO : orderRequestDTO.getItems()) {
-            Product product = productRepository.findById(itemDTO.getProductId())
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Producto no encontrado con ID: " + itemDTO.getProductId()));
-
-            if (!Boolean.TRUE.equals(product.getAvailable()) || !Boolean.TRUE.equals(product.getActive())) {
-                throw new BadRequestException("El producto '" + product.getName() + "' no está disponible");
-            }
+            // La carta decide si el producto se puede vender (existe, activo y disponible)
+            Product product = productService.getSellableProduct(itemDTO.getProductId());
 
             // Nombre y precio se copian de la carta: el cliente no puede fijarlos
             OrderItem item = new OrderItem();
@@ -169,7 +163,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private void ensureUserExists(Long userId) {
-        if (!userRepository.existsById(userId)) {
+        if (!userDirectory.exists(userId)) {
             throw new ResourceNotFoundException("Usuario no encontrado con ID: " + userId);
         }
     }

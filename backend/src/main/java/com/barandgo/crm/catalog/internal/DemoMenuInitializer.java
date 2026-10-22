@@ -1,108 +1,53 @@
-package com.barandgo.crm.config;
+package com.barandgo.crm.catalog.internal;
+
+import java.math.BigDecimal;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import com.barandgo.crm.catalog.Product;
-import com.barandgo.crm.catalog.internal.ProductCategory;
-import com.barandgo.crm.identity.User;
-import com.barandgo.crm.identity.StaffTag;
-import com.barandgo.crm.identity.UserRole;
-import com.barandgo.crm.catalog.internal.ProductCategoryRepository;
-import com.barandgo.crm.catalog.internal.ProductRepository;
-import com.barandgo.crm.identity.internal.UserRepository;
-
-import java.math.BigDecimal;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
- * Carga usuarios y carta de demostración en una base de datos vacía. Solo en el perfil dev.
- * Las categorías de carta las crea la migración V4; aquí solo se buscan por nombre.
- * Las credenciales de demo son intencionadas y están documentadas en el README.
+ * Carga la carta de demostración si no hay productos. Solo en el perfil dev.
+ * Las categorías las crea la migración V4; aquí solo se buscan por nombre.
  */
 @Component
 @Profile("dev")
-public class DataInitializer implements CommandLineRunner {
-    
-    private static final Logger logger = LoggerFactory.getLogger(DataInitializer.class);
-    
-    private final UserRepository userRepository;
+class DemoMenuInitializer implements CommandLineRunner {
+
+    private static final Logger logger = LoggerFactory.getLogger(DemoMenuInitializer.class);
+
     private final ProductRepository productRepository;
     private final ProductCategoryRepository categoryRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final String adminPassword;
-    private final String managerPassword;
-    private final String staffPassword;
-    private final String customerPassword;
-    
+
     private Map<String, ProductCategory> categoriesByName;
-    
-    public DataInitializer(UserRepository userRepository, ProductRepository productRepository,
-                           ProductCategoryRepository categoryRepository,
-                           PasswordEncoder passwordEncoder,
-                           @Value("${app.demo.admin-password}") String adminPassword,
-                           @Value("${app.demo.manager-password}") String managerPassword,
-                           @Value("${app.demo.staff-password}") String staffPassword,
-                           @Value("${app.demo.customer-password}") String customerPassword) {
-        this.userRepository = userRepository;
+
+    DemoMenuInitializer(ProductRepository productRepository, ProductCategoryRepository categoryRepository) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.adminPassword = adminPassword;
-        this.managerPassword = managerPassword;
-        this.staffPassword = staffPassword;
-        this.customerPassword = customerPassword;
     }
-    
+
     @Override
     public void run(String... args) {
-        if (userRepository.count() > 0) {
-            logger.info("La base de datos ya contiene datos. Se omite la carga de demo.");
+        if (productRepository.count() > 0) {
+            logger.info("La carta ya tiene productos. Se omite la carga de demo.");
             return;
         }
-        
-        initializeUsers();
+
         initializeProducts();
-        
-        logger.info("Datos de demo cargados: {} usuarios, {} productos",
-                userRepository.count(), productRepository.count());
+        logger.info("Carta de demo cargada: {} productos", productRepository.count());
     }
-    
-    private void initializeUsers() {
-        createUser("Admin Demo", "admin@bar.com", adminPassword, "+34912345678", UserRole.ADMIN, Set.of());
-        createUser("Encargado Demo", "encargado@bar.com", managerPassword, "+34912345679", UserRole.MANAGER,
-                Set.of(StaffTag.FLOOR));
-        createUser("Personal Demo", "personal@bar.com", staffPassword, "+34912345680", UserRole.STAFF,
-                Set.of(StaffTag.KITCHEN, StaffTag.BAR));
-        createUser("Ellen Ripley", "ripleynostromo@example.com", customerPassword, "+34698765432", UserRole.CUSTOMER, Set.of());
-        createUser("Lucas Trotacielos", "xwingluke@example.com", customerPassword, "+34611222333", UserRole.CUSTOMER, Set.of());
-        createUser("Sarah Connor", "tepersigue@example.com", customerPassword, "+34655444555", UserRole.CUSTOMER, Set.of());
-    }
-    
-    private void createUser(String name, String email, String rawPassword, String phone, UserRole role,
-                            Set<StaffTag> tags) {
-        User user = new User();
-        user.setName(name);
-        user.setEmail(email);
-        user.setPassword(passwordEncoder.encode(rawPassword));
-        user.setPhone(phone);
-        user.setRole(role);
-        user.setTags(tags);
-        userRepository.save(user);
-    }
-    
+
     private void initializeProducts() {
         categoriesByName = categoryRepository.findAll().stream()
                 .collect(Collectors.toMap(ProductCategory::getName, Function.identity()));
-        
+
         // ENTRANTES
         createProduct("Croquetas de Jamón", "Croquetas caseras de jamón ibérico (8 unidades)", 
                      new BigDecimal("8.50"), "ENTRANTES");

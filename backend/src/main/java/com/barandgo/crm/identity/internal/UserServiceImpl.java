@@ -10,6 +10,7 @@ import com.barandgo.crm.shared.BadRequestException;
 import com.barandgo.crm.shared.ForbiddenException;
 import com.barandgo.crm.shared.ResourceNotFoundException;
 import com.barandgo.crm.identity.CurrentUser;
+import com.barandgo.crm.identity.UserDirectory;
 import com.barandgo.crm.identity.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,7 +24,7 @@ import java.util.stream.Collectors;
 
 @Service
 @Transactional
-public class UserServiceImpl implements UserService {
+public class UserServiceImpl implements UserService, UserDirectory {
 
     private static final Logger logger = LoggerFactory.getLogger(UserServiceImpl.class);
 
@@ -49,6 +50,18 @@ public class UserServiceImpl implements UserService {
     public UserResponseDTO createUser(UserRequestDTO userRequestDTO, CurrentUser requester) {
         checkCanManage(requester, userRequestDTO.getRole());
         return create(userRequestDTO);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public User getUser(Long id) {
+        return findUser(id);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean exists(Long id) {
+        return userRepository.existsById(id);
     }
 
     @Override

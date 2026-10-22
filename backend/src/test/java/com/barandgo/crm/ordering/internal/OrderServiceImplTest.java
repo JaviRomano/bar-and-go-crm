@@ -27,8 +27,8 @@ import com.barandgo.crm.ordering.PaymentMethod;
 import com.barandgo.crm.identity.UserRole;
 import com.barandgo.crm.shared.BadRequestException;
 import com.barandgo.crm.shared.ForbiddenException;
-import com.barandgo.crm.catalog.internal.ProductRepository;
-import com.barandgo.crm.identity.internal.UserRepository;
+import com.barandgo.crm.catalog.ProductService;
+import com.barandgo.crm.identity.UserDirectory;
 import com.barandgo.crm.identity.CurrentUser;
 
 @ExtendWith(MockitoExtension.class)
@@ -38,18 +38,18 @@ class OrderServiceImplTest {
     private OrderRepository orderRepository;
 
     @Mock
-    private UserRepository userRepository;
+    private UserDirectory userDirectory;
 
     @Mock
-    private ProductRepository productRepository;
+    private ProductService productService;
 
     @InjectMocks
     private OrderServiceImpl orderService;
 
     @Test
     void createOrderTakesNameAndPriceFromCatalog() {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
-        when(productRepository.findById(10L)).thenReturn(Optional.of(product(10L, "Tiramisú", "5.50", true)));
+        when(userDirectory.getUser(1L)).thenReturn(user(1L));
+        when(productService.getSellableProduct(10L)).thenReturn(product(10L, "Tiramisú", "5.50", true));
         when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         OrderResponseDTO response = orderService.createOrder(1L, request(10L, 3));
@@ -64,9 +64,11 @@ class OrderServiceImplTest {
     }
 
     @Test
-    void createOrderRejectsUnavailableProduct() {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
-        when(productRepository.findById(10L)).thenReturn(Optional.of(product(10L, "Tiramisú", "5.50", false)));
+    void createOrderStopsWhenCatalogRejectsProduct() {
+        // La regla de disponibilidad es de la carta; pedidos solo debe no guardar nada
+        when(userDirectory.getUser(1L)).thenReturn(user(1L));
+        when(productService.getSellableProduct(10L))
+                .thenThrow(new BadRequestException("El producto 'Tiramisú' no está disponible"));
 
         assertThatThrownBy(() -> orderService.createOrder(1L, request(10L, 1)))
                 .isInstanceOf(BadRequestException.class)

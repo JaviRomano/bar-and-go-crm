@@ -19,7 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.barandgo.crm.catalog.ProductDTO;
 import com.barandgo.crm.catalog.Product;
 import com.barandgo.crm.shared.BadRequestException;
-import com.barandgo.crm.ordering.internal.OrderItemRepository;
+import com.barandgo.crm.catalog.ProductSalesCheck;
 
 @ExtendWith(MockitoExtension.class)
 class ProductServiceImplTest {
@@ -31,7 +31,7 @@ class ProductServiceImplTest {
     private ProductCategoryRepository categoryRepository;
 
     @Mock
-    private OrderItemRepository orderItemRepository;
+    private ProductSalesCheck productSalesCheck;
 
     @InjectMocks
     private ProductServiceImpl productService;
@@ -40,7 +40,7 @@ class ProductServiceImplTest {
     void deletingSoldProductArchivesInsteadOfDeleting() {
         Product product = product(5L, true);
         when(productRepository.findById(5L)).thenReturn(Optional.of(product));
-        when(orderItemRepository.existsByProductId(5L)).thenReturn(true);
+        when(productSalesCheck.hasSales(5L)).thenReturn(true);
 
         productService.deleteProduct(5L);
 
@@ -54,11 +54,28 @@ class ProductServiceImplTest {
     void deletingUnsoldProductRemovesIt() {
         Product product = product(6L, true);
         when(productRepository.findById(6L)).thenReturn(Optional.of(product));
-        when(orderItemRepository.existsByProductId(6L)).thenReturn(false);
+        when(productSalesCheck.hasSales(6L)).thenReturn(false);
 
         productService.deleteProduct(6L);
 
         verify(productRepository).delete(product);
+    }
+
+    @Test
+    void sellableProductMustBeActiveAndAvailable() {
+        Product sellable = product(7L, true);
+        Product outOfStockToday = product(8L, true);
+        outOfStockToday.setAvailable(false);
+        when(productRepository.findById(7L)).thenReturn(Optional.of(sellable));
+        when(productRepository.findById(8L)).thenReturn(Optional.of(outOfStockToday));
+        when(productRepository.findById(9L)).thenReturn(Optional.of(product(9L, false)));
+
+        assertThat(productService.getSellableProduct(7L)).isSameAs(sellable);
+        assertThatThrownBy(() -> productService.getSellableProduct(8L))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("no está disponible");
+        assertThatThrownBy(() -> productService.getSellableProduct(9L))
+                .isInstanceOf(BadRequestException.class);
     }
 
     @Test

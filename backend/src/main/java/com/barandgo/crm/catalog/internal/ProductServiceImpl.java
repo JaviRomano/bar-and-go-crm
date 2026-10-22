@@ -4,7 +4,7 @@ import com.barandgo.crm.catalog.ProductDTO;
 import com.barandgo.crm.catalog.Product;
 import com.barandgo.crm.shared.BadRequestException;
 import com.barandgo.crm.shared.ResourceNotFoundException;
-import com.barandgo.crm.ordering.internal.OrderItemRepository;
+import com.barandgo.crm.catalog.ProductSalesCheck;
 import com.barandgo.crm.catalog.ProductService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,13 +21,13 @@ public class ProductServiceImpl implements ProductService {
 
     private final ProductRepository productRepository;
     private final ProductCategoryRepository categoryRepository;
-    private final OrderItemRepository orderItemRepository;
+    private final ProductSalesCheck productSalesCheck;
 
     public ProductServiceImpl(ProductRepository productRepository, ProductCategoryRepository categoryRepository,
-                              OrderItemRepository orderItemRepository) {
+                              ProductSalesCheck productSalesCheck) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
-        this.orderItemRepository = orderItemRepository;
+        this.productSalesCheck = productSalesCheck;
     }
 
     @Override
@@ -51,6 +51,16 @@ public class ProductServiceImpl implements ProductService {
     @Transactional(readOnly = true)
     public ProductDTO getProductById(Long id) {
         return convertToDTO(findProduct(id));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Product getSellableProduct(Long id) {
+        Product product = findProduct(id);
+        if (!Boolean.TRUE.equals(product.getAvailable()) || !Boolean.TRUE.equals(product.getActive())) {
+            throw new BadRequestException("El producto '" + product.getName() + "' no está disponible");
+        }
+        return product;
     }
 
     @Override
@@ -109,7 +119,7 @@ public class ProductServiceImpl implements ProductService {
     public void deleteProduct(Long id) {
         Product product = findProduct(id);
 
-        if (orderItemRepository.existsByProductId(id)) {
+        if (productSalesCheck.hasSales(id)) {
             product.setActive(false);
             product.setAvailable(false);
             productRepository.save(product);

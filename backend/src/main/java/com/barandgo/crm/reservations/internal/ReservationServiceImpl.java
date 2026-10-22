@@ -3,12 +3,11 @@ package com.barandgo.crm.reservations.internal;
 import com.barandgo.crm.reservations.ReservationRequestDTO;
 import com.barandgo.crm.reservations.ReservationResponseDTO;
 import com.barandgo.crm.reservations.ReservationUpdateDTO;
-import com.barandgo.crm.identity.User;
 import com.barandgo.crm.reservations.ReservationStatus;
 import com.barandgo.crm.shared.BadRequestException;
 import com.barandgo.crm.shared.ForbiddenException;
 import com.barandgo.crm.shared.ResourceNotFoundException;
-import com.barandgo.crm.identity.internal.UserRepository;
+import com.barandgo.crm.identity.UserDirectory;
 import com.barandgo.crm.identity.CurrentUser;
 import com.barandgo.crm.reservations.ReservationService;
 import org.slf4j.Logger;
@@ -27,11 +26,11 @@ public class ReservationServiceImpl implements ReservationService {
     private static final Logger logger = LoggerFactory.getLogger(ReservationServiceImpl.class);
 
     private final ReservationRepository reservationRepository;
-    private final UserRepository userRepository;
+    private final UserDirectory userDirectory;
 
-    public ReservationServiceImpl(ReservationRepository reservationRepository, UserRepository userRepository) {
+    public ReservationServiceImpl(ReservationRepository reservationRepository, UserDirectory userDirectory) {
         this.reservationRepository = reservationRepository;
-        this.userRepository = userRepository;
+        this.userDirectory = userDirectory;
     }
 
     @Override
@@ -91,7 +90,7 @@ public class ReservationServiceImpl implements ReservationService {
     @Override
     @Transactional(readOnly = true)
     public List<ReservationResponseDTO> getReservationsForUser(Long userId) {
-        return toResponseList(reservationRepository.findByUserPhone(findUser(userId).getPhone()));
+        return toResponseList(reservationRepository.findByUserPhone(userDirectory.getUser(userId).getPhone()));
     }
 
     @Override
@@ -139,7 +138,7 @@ public class ReservationServiceImpl implements ReservationService {
         Reservation reservation = findReservation(id);
 
         if (!requester.isBackOffice()
-                && !reservation.getUserPhone().equals(findUser(requester.id()).getPhone())) {
+                && !reservation.getUserPhone().equals(userDirectory.getUser(requester.id()).getPhone())) {
             throw new ForbiddenException("No tienes acceso a esta reserva");
         }
 
@@ -176,11 +175,6 @@ public class ReservationServiceImpl implements ReservationService {
     private Reservation findReservation(Long id) {
         return reservationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Reserva no encontrada con ID: " + id));
-    }
-
-    private User findUser(Long userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con ID: " + userId));
     }
 
     private List<ReservationResponseDTO> toResponseList(List<Reservation> reservations) {
