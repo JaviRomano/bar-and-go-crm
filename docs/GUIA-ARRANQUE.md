@@ -88,6 +88,8 @@ Abrir `http://localhost:5173`. En desarrollo, la pantalla de login muestra acces
 | Rol | Email | Contraseña |
 |---|---|---|
 | Admin | admin@bar.com | admin123 |
+| Encargado | encargado@bar.com | encargado123 |
+| Personal | personal@bar.com | personal123 |
 | Cliente | ripleynostromo@example.com | cliente123 |
 
 Si la API no está en `http://localhost:8080/api`, crear `frontend/.env.local` con `VITE_API_BASE_URL` (ver `frontend/.env.example`).

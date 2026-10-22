@@ -19,3 +19,8 @@ Puntos detectados fuera del alcance de la fase en curso. Se priorizan cuando se 
 - **Fechas sin zona horaria** en entidades existentes (`LocalDateTime`). Las tablas nuevas usan `timestamptz`.
 - **Tests sin cubrir**: `ProductServiceImpl`, `UserServiceImpl`. Sin tests de frontend.
 - **Devolución a proveedor** como tipo de movimiento de stock (no está en la lista de la Fase 3).
+
+## Detectado en la Fase 1
+
+- **Versión en los DTOs** (Fase 6). `@Version` protege transacciones simultáneas, pero el cliente no envía la versión que leyó, así que dos personas editando el mismo formulario siguen pudiendo pisarse.
+- **Revisión de `order_item_link_issue`**. Líneas antiguas sin producto enlazado; hoy solo consultables por SQL.
