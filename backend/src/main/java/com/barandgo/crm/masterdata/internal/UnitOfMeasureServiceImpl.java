@@ -39,6 +39,12 @@ public class UnitOfMeasureServiceImpl implements UnitOfMeasureService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public UnitOfMeasureDTO getUnitByCode(String code) {
+        return UnitOfMeasureDTO.from(findUnit(code));
+    }
+
+    @Override
     public UnitOfMeasureDTO createUnit(UnitOfMeasureDTO unitDTO) {
         if (unitRepository.existsByCode(unitDTO.code())) {
             throw new ConflictException("Ya existe una unidad con el código '" + unitDTO.code() + "'");

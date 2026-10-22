@@ -8,6 +8,11 @@ public interface UnitOfMeasureService {
 
     List<UnitOfMeasureDTO> getUnits();
 
+    /**
+     * @throws com.barandgo.crm.shared.ResourceNotFoundException si no existe
+     */
+    UnitOfMeasureDTO getUnitByCode(String code);
+
     UnitOfMeasureDTO createUnit(UnitOfMeasureDTO unitDTO);
 
     List<UnitConversionDTO> getConversions();

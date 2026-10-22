@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +29,12 @@ public class ItemCategoryServiceImpl implements ItemCategoryService {
     @Transactional(readOnly = true)
     public List<ItemCategoryDTO> getCategories() {
         return categoryRepository.findAllByOrderByNameAsc().stream().map(ItemCategoryDTO::from).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ItemCategoryDTO getCategory(Long id) {
+        return ItemCategoryDTO.from(findCategory(id));
     }
 
     @Override
@@ -63,11 +70,20 @@ public class ItemCategoryServiceImpl implements ItemCategoryService {
         return ItemCategoryDTO.from(categoryRepository.save(category));
     }
 
-    // Hasta la Fase 2 ningún artículo la referencia; después, la FK impedirá borrar categorías en uso (409)
+    /*
+     * Una categoría con artículos no se puede borrar: lo impide la FK de stock_item. Este módulo no
+     * conoce los artículos (dependería de compras), así que se deja actuar a la FK y se fuerza el
+     * flush aquí para que la violación salga como 409 y no al hacer commit.
+     */
     @Override
     public void deleteCategory(Long id) {
         findCategory(id);
         categoryRepository.deleteById(id);
+        try {
+            categoryRepository.flush();
+        } catch (DataIntegrityViolationException ex) {
+            throw new ConflictException("La categoría tiene artículos asociados. Desactívala en lugar de borrarla");
+        }
         logger.info("Categoría de artículo {} eliminada", id);
     }
 

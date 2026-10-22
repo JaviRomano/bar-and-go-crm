@@ -33,6 +33,9 @@ import com.barandgo.crm.catalog.ProductService;
 import com.barandgo.crm.reservations.ReservationService;
 import com.barandgo.crm.masterdata.SupplierService;
 import com.barandgo.crm.masterdata.UnitOfMeasureService;
+import com.barandgo.crm.masterdata.VatRateService;
+import com.barandgo.crm.purchasing.PurchaseOrderService;
+import com.barandgo.crm.purchasing.StockItemService;
 import com.barandgo.crm.identity.UserService;
 
 @WebMvcTest
@@ -74,6 +77,15 @@ class SecurityRulesTest {
 
     @MockitoBean
     private UnitOfMeasureService unitOfMeasureService;
+
+    @MockitoBean
+    private VatRateService vatRateService;
+
+    @MockitoBean
+    private StockItemService stockItemService;
+
+    @MockitoBean
+    private PurchaseOrderService purchaseOrderService;
 
     @Test
     void catalogIsPublic() throws Exception {
@@ -257,6 +269,50 @@ class SecurityRulesTest {
                         .header(HttpHeaders.AUTHORIZATION, bearer(UserRole.ADMIN))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(conversion))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void staffReadsStockItemsButNotSupplierPrices() throws Exception {
+        when(stockItemService.getStockItems(any(), any())).thenReturn(List.of());
+        when(stockItemService.getSuppliers(any())).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/stock-items").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.STAFF)))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/stock-items/1/suppliers").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.STAFF)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/stock-items/1/suppliers").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.MANAGER)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void purchaseOrdersAreForManagers() throws Exception {
+        when(purchaseOrderService.getPurchaseOrders(any(), any())).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/purchase-orders").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.STAFF)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/purchase-orders").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.MANAGER)))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/purchase-orders").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.CUSTOMER)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void onlyAdminChangesVatRates() throws Exception {
+        when(vatRateService.getVatRates()).thenReturn(List.of());
+        String vatRate = "{\"name\":\"Especial\",\"rate\":5}";
+
+        mockMvc.perform(get("/api/vat-rates").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.MANAGER)))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/vat-rates")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(UserRole.MANAGER))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(vatRate))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/vat-rates")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(UserRole.ADMIN))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(vatRate))
                 .andExpect(status().isCreated());
     }
 

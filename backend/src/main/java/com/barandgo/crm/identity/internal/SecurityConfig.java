@@ -75,6 +75,13 @@ public class SecurityConfig {
                 // Unidades: configuración; el encargado consulta, solo ADMIN modifica
                 .requestMatchers(HttpMethod.GET, "/api/units/**").hasRole(MANAGER)
                 .requestMatchers("/api/units/**").hasRole(ADMIN)
+                .requestMatchers(HttpMethod.GET, "/api/vat-rates/**").hasRole(MANAGER)
+                .requestMatchers("/api/vat-rates/**").hasRole(ADMIN)
+                // Compras: los precios de proveedor no los ve el personal; antes que la regla general de artículos
+                .requestMatchers("/api/stock-items/*/suppliers/**").hasRole(MANAGER)
+                .requestMatchers(HttpMethod.GET, "/api/stock-items/**").hasRole(STAFF)
+                .requestMatchers("/api/stock-items/**").hasRole(MANAGER)
+                .requestMatchers("/api/purchase-orders/**").hasRole(MANAGER)
                 // Lo que no tenga regla explícita queda cerrado, incluidos endpoints nuevos sin configurar
                 .anyRequest().denyAll()
             )
