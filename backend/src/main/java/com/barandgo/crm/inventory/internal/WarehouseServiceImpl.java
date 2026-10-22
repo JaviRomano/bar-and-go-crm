@@ -1,6 +1,7 @@
 package com.barandgo.crm.inventory.internal;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,6 +50,7 @@ public class WarehouseServiceImpl implements WarehouseService {
         warehouse.setName(name);
         warehouse.setType(dto.type());
         warehouse.setActive(dto.active() != null ? dto.active() : true);
+        applySalesFlag(warehouse, dto.defaultForSales());
 
         Warehouse saved = warehouseRepository.save(warehouse);
         logger.info("Almacén '{}' creado", saved.getName());
@@ -70,9 +72,36 @@ public class WarehouseServiceImpl implements WarehouseService {
         if (dto.active() != null) {
             warehouse.setActive(dto.active());
         }
+        applySalesFlag(warehouse, dto.defaultForSales());
 
         logger.info("Almacén {} actualizado", id);
         return toDTO(warehouseRepository.save(warehouse));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<WarehouseDTO> getSalesWarehouse() {
+        return warehouseRepository.findAll().stream()
+                .filter(w -> Boolean.TRUE.equals(w.getDefaultForSales()) && Boolean.TRUE.equals(w.getActive()))
+                .findFirst()
+                .map(WarehouseServiceImpl::toDTO);
+    }
+
+    // Uno por local: marcar este desmarca el anterior (lo exige el índice único parcial)
+    private void applySalesFlag(Warehouse warehouse, Boolean defaultForSales) {
+        if (defaultForSales == null) {
+            return;
+        }
+        if (defaultForSales) {
+            warehouseRepository.findAll().stream()
+                    .filter(w -> w.getSiteId().equals(warehouse.getSiteId()) && !w.getId().equals(warehouse.getId())
+                            && Boolean.TRUE.equals(w.getDefaultForSales()))
+                    .forEach(w -> {
+                        w.setDefaultForSales(false);
+                        warehouseRepository.saveAndFlush(w);
+                    });
+        }
+        warehouse.setDefaultForSales(defaultForSales);
     }
 
     private Long resolveSite(Long siteId) {
@@ -88,6 +117,6 @@ public class WarehouseServiceImpl implements WarehouseService {
 
     static WarehouseDTO toDTO(Warehouse warehouse) {
         return new WarehouseDTO(warehouse.getId(), warehouse.getSiteId(), warehouse.getName(), warehouse.getType(),
-                warehouse.getActive());
+                warehouse.getActive(), warehouse.getDefaultForSales());
     }
 }

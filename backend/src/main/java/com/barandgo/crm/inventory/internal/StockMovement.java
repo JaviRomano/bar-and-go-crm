@@ -88,7 +88,8 @@ public class StockMovement {
 
     StockMovement(UUID operationId, MovementType type, Long stockItemId, Long warehouseId, Long lotId,
                   BigDecimal quantity, BigDecimal unitCost, BigDecimal totalCost, MovementSource sourceType,
-                  Long sourceId, Long sourceLineId, Long userId, String notes, Instant occurredAt) {
+                  Long sourceId, Long sourceLineId, Long reversesMovementId, Long userId, String notes,
+                  Instant occurredAt) {
         this.operationId = operationId;
         this.type = type;
         this.stockItemId = stockItemId;
@@ -100,6 +101,7 @@ public class StockMovement {
         this.sourceType = sourceType;
         this.sourceId = sourceId;
         this.sourceLineId = sourceLineId;
+        this.reversesMovementId = reversesMovementId;
         this.userId = userId;
         this.notes = notes;
         this.occurredAt = occurredAt;

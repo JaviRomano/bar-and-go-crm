@@ -33,6 +33,9 @@ public class Warehouse {
     @Column(nullable = false)
     private Boolean active = true;
 
+    @Column(name = "default_for_sales", nullable = false)
+    private Boolean defaultForSales = false;
+
     @Version
     private Long version;
 
@@ -73,6 +76,14 @@ public class Warehouse {
 
     public void setActive(Boolean active) {
         this.active = active;
+    }
+
+    public Boolean getDefaultForSales() {
+        return defaultForSales;
+    }
+
+    public void setDefaultForSales(Boolean defaultForSales) {
+        this.defaultForSales = defaultForSales;
     }
 
     public Long getVersion() {

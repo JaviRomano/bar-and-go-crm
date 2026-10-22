@@ -16,7 +16,11 @@ public interface OrderService {
     
     List<OrderResponseDTO> getUpcomingOrders();
     
-    OrderResponseDTO updateOrderStatus(Long id, OrderUpdateStatusDTO orderUpdateStatusDTO);
+    /**
+     * Cambia el estado según {@link OrderStatus#canTransitionTo}. Entregar publica OrderDelivered;
+     * cancelar un pedido entregado (solo ADMIN o MANAGER) publica OrderDeliveryReverted.
+     */
+    OrderResponseDTO updateOrderStatus(Long id, OrderUpdateStatusDTO orderUpdateStatusDTO, CurrentUser requester);
     
     void deleteOrder(Long id);
     

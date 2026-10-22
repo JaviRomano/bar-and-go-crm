@@ -11,15 +11,21 @@ import com.barandgo.crm.identity.User;
 import com.barandgo.crm.identity.UserDirectory;
 import com.barandgo.crm.ordering.OrderStatus;
 import com.barandgo.crm.shared.BadRequestException;
+import com.barandgo.crm.shared.ConflictException;
 import com.barandgo.crm.shared.ForbiddenException;
+import com.barandgo.crm.identity.UserRole;
+import com.barandgo.crm.ordering.OrderEvents.OrderDelivered;
+import com.barandgo.crm.ordering.OrderEvents.OrderDeliveryReverted;
 import com.barandgo.crm.shared.ResourceNotFoundException;
 import com.barandgo.crm.identity.CurrentUser;
 import com.barandgo.crm.ordering.OrderService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -33,12 +39,14 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
     private final UserDirectory userDirectory;
     private final ProductService productService;
+    private final ApplicationEventPublisher events;
 
     public OrderServiceImpl(OrderRepository orderRepository, UserDirectory userDirectory,
-                            ProductService productService) {
+                            ProductService productService, ApplicationEventPublisher events) {
         this.orderRepository = orderRepository;
         this.userDirectory = userDirectory;
         this.productService = productService;
+        this.events = events;
     }
 
     @Override
@@ -116,24 +124,50 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public OrderResponseDTO updateOrderStatus(Long id, OrderUpdateStatusDTO orderUpdateStatusDTO) {
+    public OrderResponseDTO updateOrderStatus(Long id, OrderUpdateStatusDTO orderUpdateStatusDTO, CurrentUser requester) {
         Order order = findOrder(id);
+        OrderStatus current = order.getStatus();
+        OrderStatus target = orderUpdateStatusDTO.getStatus();
+        if (current == target) {
+            return convertToResponseDTO(order);
+        }
+        if (!current.canTransitionTo(target)) {
+            throw new ConflictException("Un pedido en estado " + current + " no puede pasar a " + target);
+        }
+        boolean revertsDelivery = current == OrderStatus.DELIVERED;
+        if (revertsDelivery && requester.role() != UserRole.ADMIN && requester.role() != UserRole.MANAGER) {
+            throw new ForbiddenException("Solo un encargado puede cancelar un pedido ya entregado");
+        }
 
-        order.setStatus(orderUpdateStatusDTO.getStatus());
+        order.setStatus(target);
+        // Los eventos se guardan en la misma transacción que el cambio de estado (registro de Modulith):
+        // si el descuento de stock falla, queda pendiente y se reintenta
+        if (target == OrderStatus.DELIVERED) {
+            Instant now = Instant.now();
+            order.markDelivered(now);
+            events.publishEvent(new OrderDelivered(order.getId(), requester.id(), now, order.getItems().stream()
+                    .map(item -> new OrderDelivered.Line(
+                            item.getProduct() != null ? item.getProduct().getId() : null, item.getQuantity()))
+                    .toList()));
+        } else if (revertsDelivery) {
+            events.publishEvent(new OrderDeliveryReverted(order.getId(), requester.id()));
+        }
         Order updatedOrder = orderRepository.save(order);
 
-        logger.info("Pedido {} actualizado a estado {}", id, orderUpdateStatusDTO.getStatus());
+        logger.info("Pedido {}: {} -> {}", id, current, target);
 
         return convertToResponseDTO(updatedOrder);
     }
 
+    // Un pedido entregado ha movido stock: se conserva como documento de origen (D8)
     @Override
     public void deleteOrder(Long id) {
-        if (!orderRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Pedido no encontrado con ID: " + id);
+        Order order = findOrder(id);
+        if (order.getDeliveredAt() != null) {
+            throw new ConflictException("El pedido " + id + " se entregó y ha movido stock: no se borra, se cancela");
         }
 
-        orderRepository.deleteById(id);
+        orderRepository.delete(order);
         logger.info("Pedido {} eliminado", id);
     }
 

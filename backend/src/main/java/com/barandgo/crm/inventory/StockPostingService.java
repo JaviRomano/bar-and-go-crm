@@ -32,4 +32,10 @@ public interface StockPostingService {
      */
     PostingResult post(UUID operationId, MovementType type, MovementSource source, Long sourceId, Long warehouseId,
                        List<PostingLine> lines, String notes, CurrentUser user);
+
+    /**
+     * Anula los movimientos de un documento (una venta cancelada): un movimiento opuesto por cada uno aún
+     * no anulado, al mismo coste unitario y con reverses_movement_id. Si ya estaban anulados, no hace nada.
+     */
+    PostingResult reverse(MovementSource source, Long sourceId, String notes, CurrentUser user);
 }

@@ -44,7 +44,14 @@ class StockLedger {
      * @param unitCost coste de una entrada; null para valorar al PMP vigente. En salidas se ignora
      */
     record Entry(MovementType type, Long stockItemId, Long warehouseId, BigDecimal quantity, BigDecimal unitCost,
-                 MovementSource sourceType, Long sourceId, Long sourceLineId, NewLot newLot, String notes) {
+                 MovementSource sourceType, Long sourceId, Long sourceLineId, NewLot newLot, String notes,
+                 Long reversesMovementId) {
+
+        Entry(MovementType type, Long stockItemId, Long warehouseId, BigDecimal quantity, BigDecimal unitCost,
+              MovementSource sourceType, Long sourceId, Long sourceLineId, NewLot newLot, String notes) {
+            this(type, stockItemId, warehouseId, quantity, unitCost, sourceType, sourceId, sourceLineId, newLot, notes,
+                    null);
+        }
     }
 
     record Posted(StockMovement movement, StockLot createdLot, List<LotAllocator.Allocation> lotAllocations) {
@@ -129,7 +136,8 @@ class StockLedger {
                 entry.stockItemId(), warehouse.getId(), createdLot != null ? createdLot.getId() : null, quantity,
                 unitCost.setScale(MovingAverage.COST_SCALE, RoundingMode.HALF_UP),
                 quantity.multiply(unitCost).setScale(4, RoundingMode.HALF_UP),
-                entry.sourceType(), entry.sourceId(), entry.sourceLineId(), userId, entry.notes(), now));
+                entry.sourceType(), entry.sourceId(), entry.sourceLineId(), entry.reversesMovementId(), userId,
+                entry.notes(), now));
         return new Posted(movement, createdLot, allocations);
     }
 

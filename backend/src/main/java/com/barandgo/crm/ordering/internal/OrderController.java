@@ -85,9 +85,10 @@ public class OrderController {
 
     @PatchMapping("/{id}/status")
     public ResponseEntity<OrderResponseDTO> updateOrderStatus(
+            @AuthenticationPrincipal Jwt jwt,
             @PathVariable Long id,
             @Valid @RequestBody OrderUpdateStatusDTO orderUpdateStatusDTO) {
-        return ResponseEntity.ok(orderService.updateOrderStatus(id, orderUpdateStatusDTO));
+        return ResponseEntity.ok(orderService.updateOrderStatus(id, orderUpdateStatusDTO, CurrentUser.from(jwt)));
     }
 
     @DeleteMapping("/{id}")

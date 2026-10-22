@@ -5,8 +5,9 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 /**
- * Almacén. En peticiones se ignora el id; siteId es opcional (por defecto, el único local) y
- * active también (por defecto true).
+ * Almacén. En peticiones se ignora el id; siteId es opcional (por defecto, el único local), active
+ * también (por defecto true) y defaultForSales (por defecto false). Marcar un almacén como origen de las
+ * ventas desmarca el que lo fuera antes en su local.
  */
 public record WarehouseDTO(
         Long id,
@@ -20,5 +21,7 @@ public record WarehouseDTO(
         @NotNull(message = "El tipo de almacén es obligatorio")
         WarehouseType type,
 
-        Boolean active) {
+        Boolean active,
+
+        Boolean defaultForSales) {
 }

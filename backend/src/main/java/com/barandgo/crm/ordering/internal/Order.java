@@ -4,6 +4,7 @@ import com.barandgo.crm.identity.User;
 import com.barandgo.crm.ordering.OrderStatus;
 import com.barandgo.crm.ordering.PaymentMethod;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 import jakarta.persistence.CascadeType;
@@ -53,6 +54,10 @@ public class Order {
     @Column(name = "payment_method", nullable = false, length = 10)
     private PaymentMethod paymentMethod;
     
+    // Primera entrega del pedido; se conserva aunque después se cancele (devolución)
+    @Column(name = "delivered_at")
+    private Instant deliveredAt;
+
     @Version
     private Long version;
     
@@ -144,6 +149,14 @@ public class Order {
         this.items = items;
     }
     
+    public Instant getDeliveredAt() {
+        return deliveredAt;
+    }
+
+    public void markDelivered(Instant when) {
+        this.deliveredAt = when;
+    }
+
     public Long getVersion() {
         return version;
     }

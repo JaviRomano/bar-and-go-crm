@@ -221,6 +221,31 @@ public class InventoryServiceImpl implements InventoryService, StockPostingServi
     }
 
     @Override
+    public PostingResult reverse(MovementSource source, Long sourceId, String notes, CurrentUser user) {
+        List<StockMovement> movements = movementRepository.findBySourceTypeAndSourceIdOrderById(source, sourceId);
+        Set<Long> alreadyReversed = movements.stream()
+                .map(StockMovement::getReversesMovementId)
+                .filter(id -> id != null)
+                .collect(Collectors.toSet());
+        List<StockLedger.Entry> entries = movements.stream()
+                .filter(m -> m.getReversesMovementId() == null && !alreadyReversed.contains(m.getId()))
+                .map(m -> new StockLedger.Entry(m.getType(), m.getStockItemId(), m.getWarehouseId(),
+                        m.getQuantity().negate(), m.getUnitCost(), source, sourceId, m.getSourceLineId(), null, notes,
+                        m.getId()))
+                .toList();
+        UUID operation = UUID.randomUUID();
+        if (entries.isEmpty()) {
+            return new PostingResult(operation, List.of(), BigDecimal.ZERO);
+        }
+        List<StockMovement> reversals = ledger.post(operation, entries, user.id()).stream()
+                .map(StockLedger.Posted::movement)
+                .toList();
+        BigDecimal total = reversals.stream().map(StockMovement::getTotalCost).reduce(BigDecimal.ZERO, BigDecimal::add);
+        logger.info("Anulados {} movimientos de {} {}", reversals.size(), source, sourceId);
+        return new PostingResult(operation, toDTOs(reversals), total);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public List<ExpiringLotDTO> getExpiringLots(int days) {
         if (days < 0) {

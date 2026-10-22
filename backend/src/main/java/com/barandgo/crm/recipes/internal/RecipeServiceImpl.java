@@ -162,6 +162,17 @@ public class RecipeServiceImpl implements RecipeService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Optional<Map<Long, BigDecimal>> consumptionForProduct(Long productId, BigDecimal portions) {
+        Optional<Recipe> recipe = recipeRepository.findByProductId(productId)
+                .filter(r -> Boolean.TRUE.equals(r.getActive()));
+        if (recipe.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(modelLoader.load(false).costing().stockConsumption(recipe.get().getId(), portions));
+    }
+
+    @Override
     public ProductionDTO produce(Long id, ProductionRequest request, CurrentUser requester) {
         Recipe recipe = findRecipe(id);
         if (recipe.getType() != RecipeType.PREPARATION || recipe.getStockItemId() == null) {

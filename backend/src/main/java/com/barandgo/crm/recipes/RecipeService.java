@@ -1,6 +1,9 @@
 package com.barandgo.crm.recipes;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import com.barandgo.crm.identity.CurrentUser;
 import com.barandgo.crm.recipes.RecipeDTOs.CostHistoryEntry;
@@ -27,6 +30,12 @@ public interface RecipeService {
 
     /** Recalcula el coste de todos los escandallos y guarda los que han cambiado. Devuelve cuántos. */
     int recalculateAll();
+
+    /**
+     * Artículos de stock (id y cantidad en unidad de inventario) que consumen {@code portions} raciones de
+     * un producto según su escandallo. Vacío si el producto no tiene escandallo activo.
+     */
+    Optional<Map<Long, BigDecimal>> consumptionForProduct(Long productId, BigDecimal portions);
 
     /** Produce una elaboración inventariable: consume sus ingredientes y da de alta el resultado. */
     ProductionDTO produce(Long id, ProductionRequest request, CurrentUser requester);

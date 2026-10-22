@@ -3,11 +3,13 @@ package com.barandgo.crm.ordering.internal;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -17,6 +19,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import com.barandgo.crm.ordering.OrderItemRequestDTO;
 import com.barandgo.crm.ordering.OrderRequestDTO;
@@ -30,6 +33,11 @@ import com.barandgo.crm.shared.ForbiddenException;
 import com.barandgo.crm.catalog.ProductService;
 import com.barandgo.crm.identity.UserDirectory;
 import com.barandgo.crm.identity.CurrentUser;
+import com.barandgo.crm.ordering.OrderEvents.OrderDelivered;
+import com.barandgo.crm.ordering.OrderEvents.OrderDeliveryReverted;
+import com.barandgo.crm.ordering.OrderStatus;
+import com.barandgo.crm.ordering.OrderUpdateStatusDTO;
+import com.barandgo.crm.shared.ConflictException;
 
 @ExtendWith(MockitoExtension.class)
 class OrderServiceImplTest {
@@ -42,6 +50,9 @@ class OrderServiceImplTest {
 
     @Mock
     private ProductService productService;
+
+    @Mock
+    private ApplicationEventPublisher events;
 
     @InjectMocks
     private OrderServiceImpl orderService;
@@ -101,6 +112,91 @@ class OrderServiceImplTest {
 
         assertThatThrownBy(() -> orderService.getOrdersBetween(now, now.minusDays(1)))
                 .isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    void deliveringPublishesEventWithLines() {
+        Order order = order(50L, user(2L));
+        order.setStatus(OrderStatus.READY);
+        OrderItem item = new OrderItem();
+        item.setProduct(product(10L, "Tiramisú", "5.50", true));
+        item.setProductName("Tiramisú");
+        item.setUnitPrice(new BigDecimal("5.50"));
+        item.setQuantity(2);
+        order.addItem(item);
+        when(orderRepository.findById(50L)).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        orderService.updateOrderStatus(50L, status(OrderStatus.DELIVERED), STAFF);
+
+        assertThat(order.getDeliveredAt()).isNotNull();
+        verify(events).publishEvent(argThat((Object event) -> event instanceof OrderDelivered delivered
+                && delivered.orderId().equals(50L)
+                && delivered.lines().equals(List.of(new OrderDelivered.Line(10L, 2)))));
+    }
+
+    @Test
+    void skippingStatesIsRejected() {
+        Order order = order(50L, user(2L));
+        order.setStatus(OrderStatus.CREATED);
+        when(orderRepository.findById(50L)).thenReturn(Optional.of(order));
+
+        assertThatThrownBy(() -> orderService.updateOrderStatus(50L, status(OrderStatus.DELIVERED), STAFF))
+                .isInstanceOf(ConflictException.class);
+        verify(events, never()).publishEvent(any(Object.class));
+    }
+
+    @Test
+    void sameStatusIsANoOp() {
+        Order order = order(50L, user(2L));
+        order.setStatus(OrderStatus.DELIVERED);
+        when(orderRepository.findById(50L)).thenReturn(Optional.of(order));
+
+        orderService.updateOrderStatus(50L, status(OrderStatus.DELIVERED), STAFF);
+
+        verify(events, never()).publishEvent(any(Object.class));
+        verify(orderRepository, never()).save(any());
+    }
+
+    @Test
+    void onlyManagersCancelDeliveredOrders() {
+        Order order = order(50L, user(2L));
+        order.setStatus(OrderStatus.DELIVERED);
+        when(orderRepository.findById(50L)).thenReturn(Optional.of(order));
+
+        assertThatThrownBy(() -> orderService.updateOrderStatus(50L, status(OrderStatus.CANCELLED), STAFF))
+                .isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test
+    void cancellingDeliveredOrderPublishesReversal() {
+        Order order = order(50L, user(2L));
+        order.setStatus(OrderStatus.DELIVERED);
+        when(orderRepository.findById(50L)).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        CurrentUser manager = new CurrentUser(7L, "encargado@bar.com", UserRole.MANAGER);
+        orderService.updateOrderStatus(50L, status(OrderStatus.CANCELLED), manager);
+
+        verify(events).publishEvent(new OrderDeliveryReverted(50L, 7L));
+    }
+
+    @Test
+    void deliveredOrderCannotBeDeleted() {
+        Order order = order(50L, user(2L));
+        order.markDelivered(Instant.now());
+        when(orderRepository.findById(50L)).thenReturn(Optional.of(order));
+
+        assertThatThrownBy(() -> orderService.deleteOrder(50L)).isInstanceOf(ConflictException.class);
+        verify(orderRepository, never()).delete(any());
+    }
+
+    private static final CurrentUser STAFF = new CurrentUser(3L, "personal@bar.com", UserRole.STAFF);
+
+    private static OrderUpdateStatusDTO status(OrderStatus status) {
+        OrderUpdateStatusDTO dto = new OrderUpdateStatusDTO();
+        dto.setStatus(status);
+        return dto;
     }
 
     private static OrderRequestDTO request(Long productId, int quantity) {

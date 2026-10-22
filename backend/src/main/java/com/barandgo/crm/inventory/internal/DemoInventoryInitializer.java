@@ -89,7 +89,9 @@ class DemoInventoryInitializer implements CommandLineRunner {
         UserResponseDTO adminUser = userService.getUserByEmail("admin@bar.com");
         admin = new CurrentUser(adminUser.getId(), adminUser.getEmail(), adminUser.getRole());
 
-        long coldRoom = warehouse("Cámara", WarehouseType.COLD_ROOM);
+        // Las ventas salen de la cámara, donde está casi toda la mercancía (simplificación de la Fase 5)
+        long coldRoom = warehouseService.createWarehouse(
+                new WarehouseDTO(null, null, "Cámara", WarehouseType.COLD_ROOM, true, true)).id();
         long dryStore = warehouse("Almacén seco", WarehouseType.DRY_STORE);
         long bar = warehouse("Barra", WarehouseType.BAR);
         warehouse("Congelador", WarehouseType.FREEZER);
@@ -133,7 +135,7 @@ class DemoInventoryInitializer implements CommandLineRunner {
     }
 
     private long warehouse(String name, WarehouseType type) {
-        return warehouseService.createWarehouse(new WarehouseDTO(null, null, name, type, true)).id();
+        return warehouseService.createWarehouse(new WarehouseDTO(null, null, name, type, true, false)).id();
     }
 
     private PurchaseOrderLineRequestDTO line(String code, String quantity) {
