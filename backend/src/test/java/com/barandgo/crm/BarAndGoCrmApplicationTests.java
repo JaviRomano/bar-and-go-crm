@@ -35,6 +35,7 @@ import com.barandgo.crm.catalog.internal.ProductCategoryRepository;
 import com.barandgo.crm.catalog.internal.ProductRepository;
 import com.barandgo.crm.identity.internal.UserRepository;
 import com.barandgo.crm.identity.internal.TokenService;
+import com.barandgo.crm.masterdata.VatRateService;
 import com.jayway.jsonpath.JsonPath;
 
 /**
@@ -66,6 +67,9 @@ class BarAndGoCrmApplicationTests {
 
     @Autowired
     private TokenService tokenService;
+
+    @Autowired
+    private VatRateService vatRateService;
 
     @Test
     void customerRegistersOrdersAndOnlySeesOwnOrders() throws Exception {
@@ -306,6 +310,7 @@ class BarAndGoCrmApplicationTests {
         product.setName(name);
         product.setPrice(new BigDecimal(price));
         product.setCategory(categoryRepository.findByActiveTrueOrderBySortOrderAscNameAsc().get(0));
+        product.setVatRateId(vatRateService.getVatRates().get(0).id());
         product.setAvailable(true);
         return productRepository.save(product);
     }

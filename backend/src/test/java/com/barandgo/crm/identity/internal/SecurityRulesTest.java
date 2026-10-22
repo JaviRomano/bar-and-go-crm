@@ -38,6 +38,7 @@ import com.barandgo.crm.inventory.ReplenishmentService;
 import com.barandgo.crm.inventory.StockCountService;
 import com.barandgo.crm.inventory.WarehouseService;
 import com.barandgo.crm.masterdata.UnitOfMeasureService;
+import com.barandgo.crm.recipes.RecipeService;
 import com.barandgo.crm.masterdata.VatRateService;
 import com.barandgo.crm.purchasing.PurchaseOrderService;
 import com.barandgo.crm.purchasing.StockItemService;
@@ -106,6 +107,9 @@ class SecurityRulesTest {
 
     @MockitoBean
     private ReplenishmentService replenishmentService;
+
+    @MockitoBean
+    private RecipeService recipeService;
 
     @Test
     void catalogIsPublic() throws Exception {
@@ -383,6 +387,25 @@ class SecurityRulesTest {
         mockMvc.perform(get("/api/inventory/stock").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.CUSTOMER)))
                 .andExpect(status().isForbidden());
         mockMvc.perform(get("/api/warehouses").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.CUSTOMER)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void staffReadsRecipesAndProducesButManagerMaintainsThem() throws Exception {
+        when(recipeService.getRecipes(any(), any())).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/recipes").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.STAFF)))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/recipes/1/cost-history").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.STAFF)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/recipes")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(UserRole.STAFF))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/recipes/recalculate").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.STAFF)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/recipes").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.CUSTOMER)))
                 .andExpect(status().isForbidden());
     }
 

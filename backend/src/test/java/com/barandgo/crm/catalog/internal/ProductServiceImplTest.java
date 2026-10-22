@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
@@ -19,13 +20,22 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.barandgo.crm.catalog.ProductDTO;
 import com.barandgo.crm.catalog.Product;
 import com.barandgo.crm.shared.BadRequestException;
+import com.barandgo.crm.catalog.ProductAllergenSource;
 import com.barandgo.crm.catalog.ProductSalesCheck;
+import com.barandgo.crm.masterdata.VatRateDTO;
+import com.barandgo.crm.masterdata.VatRateService;
 
 @ExtendWith(MockitoExtension.class)
 class ProductServiceImplTest {
 
     @Mock
     private ProductRepository productRepository;
+
+    @Mock
+    private ProductAllergenSource allergenSource;
+
+    @Mock
+    private VatRateService vatRateService;
 
     @Mock
     private ProductCategoryRepository categoryRepository;
@@ -108,6 +118,9 @@ class ProductServiceImplTest {
     void responseCarriesCategoryIdAndName() {
         when(categoryRepository.findById(1L)).thenReturn(Optional.of(category(1L, "POSTRES")));
         when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(vatRateService.getVatRates()).thenReturn(List.of(
+                new VatRateDTO(1L, "General", new BigDecimal("21.00"), true),
+                new VatRateDTO(2L, "Reducido", new BigDecimal("10.00"), true)));
 
         ProductDTO request = new ProductDTO();
         request.setName("Flan");
@@ -118,6 +131,9 @@ class ProductServiceImplTest {
 
         assertThat(created.getCategoryId()).isEqualTo(1L);
         assertThat(created.getCategory()).isEqualTo("POSTRES");
+        // Sin tipo de IVA indicado se aplica el del 10 %
+        assertThat(created.getVatRateId()).isEqualTo(2L);
+        assertThat(created.getVatRate()).isEqualByComparingTo("10.00");
     }
 
     private static Product product(Long id, boolean active) {

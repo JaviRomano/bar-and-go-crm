@@ -13,6 +13,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import com.barandgo.crm.catalog.Product;
+import com.barandgo.crm.masterdata.VatRateService;
 
 /**
  * Carga la carta de demostración si no hay productos. Solo en el perfil dev.
@@ -27,12 +28,16 @@ class DemoMenuInitializer implements CommandLineRunner {
 
     private final ProductRepository productRepository;
     private final ProductCategoryRepository categoryRepository;
+    private final VatRateService vatRateService;
+    private Long reducedVatRateId;
 
     private Map<String, ProductCategory> categoriesByName;
 
-    DemoMenuInitializer(ProductRepository productRepository, ProductCategoryRepository categoryRepository) {
+    DemoMenuInitializer(ProductRepository productRepository, ProductCategoryRepository categoryRepository,
+                        VatRateService vatRateService) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
+        this.vatRateService = vatRateService;
     }
 
     @Override
@@ -42,6 +47,12 @@ class DemoMenuInitializer implements CommandLineRunner {
             return;
         }
 
+        // Comida y bebida en sala tributan al 10 % (el tipo lo fija la migración V9)
+        reducedVatRateId = vatRateService.getVatRates().stream()
+                .filter(rate -> rate.rate().compareTo(new BigDecimal("10.00")) == 0)
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("Falta el tipo de IVA del 10 % (migración V9)"))
+                .id();
         initializeProducts();
         logger.info("Carta de demo cargada: {} productos", productRepository.count());
     }
@@ -128,6 +139,7 @@ class DemoMenuInitializer implements CommandLineRunner {
             throw new IllegalStateException("Falta la categoría de carta '" + category + "' (la crea la migración V4)");
         }
         product.setCategory(productCategory);
+        product.setVatRateId(reducedVatRateId);
         product.setAvailable(true);
         productRepository.save(product);
     }

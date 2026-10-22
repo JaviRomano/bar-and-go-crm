@@ -92,6 +92,11 @@ public class SecurityConfig {
                 .requestMatchers("/api/goods-receipts/**").hasRole(MANAGER)
                 .requestMatchers(HttpMethod.POST, "/api/stock-counts", "/api/stock-counts/*/close").hasRole(MANAGER)
                 .requestMatchers("/api/stock-counts/**").hasRole(STAFF)
+                // Escandallos: el personal consulta (sin costes) y produce; el encargado los mantiene
+                .requestMatchers("/api/recipes/*/cost-history", "/api/recipes/recalculate").hasRole(MANAGER)
+                .requestMatchers(HttpMethod.POST, "/api/recipes/*/production").hasRole(STAFF)
+                .requestMatchers(HttpMethod.GET, "/api/recipes/**").hasRole(STAFF)
+                .requestMatchers("/api/recipes/**").hasRole(MANAGER)
                 // Lo que no tenga regla explícita queda cerrado, incluidos endpoints nuevos sin configurar
                 .anyRequest().denyAll()
             )

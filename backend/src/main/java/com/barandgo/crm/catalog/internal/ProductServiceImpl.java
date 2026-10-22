@@ -1,7 +1,11 @@
 package com.barandgo.crm.catalog.internal;
 
+import com.barandgo.crm.catalog.ProductAllergenSource;
 import com.barandgo.crm.catalog.ProductDTO;
 import com.barandgo.crm.catalog.Product;
+import com.barandgo.crm.masterdata.Allergen;
+import com.barandgo.crm.masterdata.VatRateDTO;
+import com.barandgo.crm.masterdata.VatRateService;
 import com.barandgo.crm.shared.BadRequestException;
 import com.barandgo.crm.shared.ResourceNotFoundException;
 import com.barandgo.crm.catalog.ProductSalesCheck;
@@ -10,7 +14,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.math.BigDecimal;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -19,15 +27,23 @@ public class ProductServiceImpl implements ProductService {
 
     private static final Logger logger = LoggerFactory.getLogger(ProductServiceImpl.class);
 
+    // Tipo por defecto si no se indica: el del 10 %, el habitual en hostelería
+    private static final BigDecimal DEFAULT_VAT_RATE = new BigDecimal("10.00");
+
     private final ProductRepository productRepository;
     private final ProductCategoryRepository categoryRepository;
     private final ProductSalesCheck productSalesCheck;
+    private final ProductAllergenSource allergenSource;
+    private final VatRateService vatRateService;
 
     public ProductServiceImpl(ProductRepository productRepository, ProductCategoryRepository categoryRepository,
-                              ProductSalesCheck productSalesCheck) {
+                              ProductSalesCheck productSalesCheck, ProductAllergenSource allergenSource,
+                              VatRateService vatRateService) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.productSalesCheck = productSalesCheck;
+        this.allergenSource = allergenSource;
+        this.vatRateService = vatRateService;
     }
 
     @Override
@@ -37,20 +53,23 @@ public class ProductServiceImpl implements ProductService {
         product.setDescription(productDTO.getDescription());
         product.setPrice(productDTO.getPrice());
         product.setCategory(findActiveCategory(productDTO.getCategoryId()));
+        product.setVatRateId(productDTO.getVatRateId() != null
+                ? activeVatRate(productDTO.getVatRateId()).id()
+                : defaultVatRate().id());
         product.setAvailable(productDTO.getAvailable() != null ? productDTO.getAvailable() : true);
         product.setImageUrl(productDTO.getImageUrl());
 
         Product savedProduct = productRepository.save(product);
         logger.info("Producto {} creado", savedProduct.getId());
 
-        return convertToDTO(savedProduct);
+        return toDTOList(List.of(savedProduct)).get(0);
     }
 
     // Incluye archivados: un pedido antiguo puede necesitar consultar su producto
     @Override
     @Transactional(readOnly = true)
     public ProductDTO getProductById(Long id) {
-        return convertToDTO(findProduct(id));
+        return toDTOList(List.of(findProduct(id))).get(0);
     }
 
     @Override
@@ -98,6 +117,9 @@ public class ProductServiceImpl implements ProductService {
                 && !productDTO.getCategoryId().equals(product.getCategory().getId())) {
             product.setCategory(findActiveCategory(productDTO.getCategoryId()));
         }
+        if (productDTO.getVatRateId() != null && !productDTO.getVatRateId().equals(product.getVatRateId())) {
+            product.setVatRateId(activeVatRate(productDTO.getVatRateId()).id());
+        }
         if (productDTO.getAvailable() != null) {
             product.setAvailable(productDTO.getAvailable());
         }
@@ -108,7 +130,7 @@ public class ProductServiceImpl implements ProductService {
         Product updatedProduct = productRepository.save(product);
         logger.info("Producto {} actualizado", updatedProduct.getId());
 
-        return convertToDTO(updatedProduct);
+        return toDTOList(List.of(updatedProduct)).get(0);
     }
 
     /**
@@ -144,7 +166,7 @@ public class ProductServiceImpl implements ProductService {
 
         logger.info("Disponibilidad del producto {} cambiada a: {}", id, updatedProduct.getAvailable());
 
-        return convertToDTO(updatedProduct);
+        return toDTOList(List.of(updatedProduct)).get(0);
     }
 
     private Product findProduct(Long id) {
@@ -161,13 +183,35 @@ public class ProductServiceImpl implements ProductService {
         return category;
     }
 
+    private VatRateDTO activeVatRate(Long vatRateId) {
+        VatRateDTO vatRate = vatRateService.getVatRate(vatRateId);
+        if (!Boolean.TRUE.equals(vatRate.active())) {
+            throw new BadRequestException("El tipo de IVA '" + vatRate.name() + "' está desactivado");
+        }
+        return vatRate;
+    }
+
+    private VatRateDTO defaultVatRate() {
+        return vatRateService.getVatRates().stream()
+                .filter(rate -> Boolean.TRUE.equals(rate.active()) && rate.rate().compareTo(DEFAULT_VAT_RATE) == 0)
+                .findFirst()
+                .orElseThrow(() -> new BadRequestException("No hay un tipo de IVA del 10 % activo: indica vatRateId"));
+    }
+
+    // Alérgenos e IVA de todos los productos con una consulta cada uno, no una por producto
     private List<ProductDTO> toDTOList(List<Product> products) {
+        Map<Long, Set<Allergen>> allergens = allergenSource.allergensByProduct(
+                products.stream().map(Product::getId).toList());
+        Map<Long, BigDecimal> vatRates = vatRateService.getVatRates().stream()
+                .collect(Collectors.toMap(VatRateDTO::id, VatRateDTO::rate));
         return products.stream()
-                .map(this::convertToDTO)
+                .map(product -> convertToDTO(product,
+                        allergens.getOrDefault(product.getId(), EnumSet.noneOf(Allergen.class)),
+                        vatRates.get(product.getVatRateId())))
                 .collect(Collectors.toList());
     }
 
-    private ProductDTO convertToDTO(Product product) {
+    private ProductDTO convertToDTO(Product product, Set<Allergen> allergens, BigDecimal vatRate) {
         ProductDTO dto = new ProductDTO();
         dto.setId(product.getId());
         dto.setName(product.getName());
@@ -175,6 +219,9 @@ public class ProductServiceImpl implements ProductService {
         dto.setPrice(product.getPrice());
         dto.setCategoryId(product.getCategory().getId());
         dto.setCategory(product.getCategory().getName());
+        dto.setVatRateId(product.getVatRateId());
+        dto.setVatRate(vatRate);
+        dto.setAllergens(allergens);
         dto.setAvailable(product.getAvailable());
         dto.setImageUrl(product.getImageUrl());
         return dto;

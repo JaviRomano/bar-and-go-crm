@@ -35,6 +35,10 @@ public class Product {
     @JoinColumn(name = "category_id", nullable = false)
     private ProductCategory category;
 
+    // Tipo de IVA de venta (módulo de datos maestros); el precio de carta lo incluye
+    @Column(name = "vat_rate_id", nullable = false)
+    private Long vatRateId;
+
     // Disponible hoy en la carta
     @Column(nullable = false)
     private Boolean available = true;
@@ -90,6 +94,14 @@ public class Product {
 
     public void setCategory(ProductCategory category) {
         this.category = category;
+    }
+
+    public Long getVatRateId() {
+        return vatRateId;
+    }
+
+    public void setVatRateId(Long vatRateId) {
+        this.vatRateId = vatRateId;
     }
 
     public Boolean getAvailable() {
