@@ -50,6 +50,10 @@ public class PurchaseOrderLine {
     @Column(name = "vat_rate", nullable = false, precision = 5, scale = 2)
     private BigDecimal vatRate;
 
+    // Recibido hasta ahora, en la unidad de la línea; lo actualiza la recepción de albaranes
+    @Column(name = "received_quantity", nullable = false, precision = 18, scale = 4)
+    private BigDecimal receivedQuantity = BigDecimal.ZERO;
+
     public PurchaseOrderLine() {
     }
 
@@ -111,5 +115,17 @@ public class PurchaseOrderLine {
 
     public void setVatRate(BigDecimal vatRate) {
         this.vatRate = vatRate;
+    }
+
+    public BigDecimal getReceivedQuantity() {
+        return receivedQuantity;
+    }
+
+    public void addReceived(BigDecimal quantity) {
+        this.receivedQuantity = receivedQuantity.add(quantity);
+    }
+
+    public boolean isFullyReceived() {
+        return receivedQuantity.compareTo(quantity) >= 0;
     }
 }

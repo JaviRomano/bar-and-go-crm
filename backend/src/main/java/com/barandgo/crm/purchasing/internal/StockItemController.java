@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.barandgo.crm.purchasing.PurchasePriceDTO;
 import com.barandgo.crm.purchasing.StockItemDTO;
 import com.barandgo.crm.purchasing.StockItemService;
 import com.barandgo.crm.purchasing.StockItemSupplierDTO;
@@ -69,6 +70,11 @@ public class StockItemController {
             @PathVariable Long supplierId,
             @Valid @RequestBody StockItemSupplierDTO priceDTO) {
         return ResponseEntity.ok(stockItemService.setSupplierPrice(id, supplierId, priceDTO));
+    }
+
+    @GetMapping("/{id}/price-history")
+    public ResponseEntity<List<PurchasePriceDTO>> getPriceHistory(@PathVariable Long id) {
+        return ResponseEntity.ok(stockItemService.getPriceHistory(id));
     }
 
     @DeleteMapping("/{id}/suppliers/{supplierId}")

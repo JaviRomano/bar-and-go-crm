@@ -78,10 +78,20 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/vat-rates/**").hasRole(MANAGER)
                 .requestMatchers("/api/vat-rates/**").hasRole(ADMIN)
                 // Compras: los precios de proveedor no los ve el personal; antes que la regla general de artículos
-                .requestMatchers("/api/stock-items/*/suppliers/**").hasRole(MANAGER)
+                .requestMatchers("/api/stock-items/*/suppliers/**", "/api/stock-items/*/price-history").hasRole(MANAGER)
                 .requestMatchers(HttpMethod.GET, "/api/stock-items/**").hasRole(STAFF)
                 .requestMatchers("/api/stock-items/**").hasRole(MANAGER)
                 .requestMatchers("/api/purchase-orders/**").hasRole(MANAGER)
+                // Inventario: el personal ve cantidades, recibe, traspasa y cuenta; costes y ajustes, MANAGER
+                .requestMatchers(HttpMethod.GET, "/api/warehouses/**").hasRole(STAFF)
+                .requestMatchers("/api/warehouses/**").hasRole(MANAGER)
+                .requestMatchers(HttpMethod.GET, "/api/inventory/stock", "/api/inventory/lots/**").hasRole(STAFF)
+                .requestMatchers(HttpMethod.POST, "/api/inventory/transfers").hasRole(STAFF)
+                .requestMatchers("/api/inventory/**").hasRole(MANAGER)
+                .requestMatchers(HttpMethod.POST, "/api/goods-receipts").hasRole(STAFF)
+                .requestMatchers("/api/goods-receipts/**").hasRole(MANAGER)
+                .requestMatchers(HttpMethod.POST, "/api/stock-counts", "/api/stock-counts/*/close").hasRole(MANAGER)
+                .requestMatchers("/api/stock-counts/**").hasRole(STAFF)
                 // Lo que no tenga regla explícita queda cerrado, incluidos endpoints nuevos sin configurar
                 .anyRequest().denyAll()
             )

@@ -1,5 +1,7 @@
 package com.barandgo.crm.purchasing;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -22,4 +24,14 @@ public interface StockItemService {
     StockItemSupplierDTO setSupplierPrice(Long stockItemId, Long supplierId, StockItemSupplierDTO priceDTO);
 
     void removeSupplier(Long stockItemId, Long supplierId);
+
+    /** Compras registradas del artículo, la más reciente primero. */
+    List<PurchasePriceDTO> getPriceHistory(Long stockItemId);
+
+    /**
+     * Registra el precio pagado en una compra y lo deja como tarifa vigente de ese proveedor
+     * (convertido a la unidad de la tarifa si existía en otra unidad).
+     */
+    void recordPurchasePrice(Long stockItemId, Long supplierId, String unit, BigDecimal unitPrice,
+                             LocalDate purchasedOn, String reference);
 }

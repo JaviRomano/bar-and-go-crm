@@ -1,5 +1,7 @@
 package com.barandgo.crm.purchasing.internal;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
@@ -21,9 +23,11 @@ import com.barandgo.crm.masterdata.UnitConverter;
 import com.barandgo.crm.masterdata.VatRateDTO;
 import com.barandgo.crm.masterdata.VatRateService;
 import com.barandgo.crm.purchasing.ItemUnitConversionDTO;
+import com.barandgo.crm.purchasing.PurchasePriceDTO;
 import com.barandgo.crm.purchasing.StockItemDTO;
 import com.barandgo.crm.purchasing.StockItemService;
 import com.barandgo.crm.purchasing.StockItemSupplierDTO;
+import com.barandgo.crm.purchasing.StockItemUsageCheck;
 import com.barandgo.crm.shared.BadRequestException;
 import com.barandgo.crm.shared.ConflictException;
 import com.barandgo.crm.shared.ResourceNotFoundException;
@@ -36,23 +40,29 @@ public class StockItemServiceImpl implements StockItemService {
 
     private final StockItemRepository stockItemRepository;
     private final StockItemSupplierRepository supplierPriceRepository;
+    private final PurchasePriceHistoryRepository priceHistoryRepository;
     private final UnitCatalog unitCatalog;
     private final ItemCategoryService itemCategoryService;
     private final VatRateService vatRateService;
     private final SupplierService supplierService;
+    private final StockItemUsageCheck usageCheck;
 
     public StockItemServiceImpl(StockItemRepository stockItemRepository,
                                 StockItemSupplierRepository supplierPriceRepository,
+                                PurchasePriceHistoryRepository priceHistoryRepository,
                                 UnitCatalog unitCatalog,
                                 ItemCategoryService itemCategoryService,
                                 VatRateService vatRateService,
-                                SupplierService supplierService) {
+                                SupplierService supplierService,
+                                StockItemUsageCheck usageCheck) {
         this.stockItemRepository = stockItemRepository;
         this.supplierPriceRepository = supplierPriceRepository;
+        this.priceHistoryRepository = priceHistoryRepository;
         this.unitCatalog = unitCatalog;
         this.itemCategoryService = itemCategoryService;
         this.vatRateService = vatRateService;
         this.supplierService = supplierService;
+        this.usageCheck = usageCheck;
     }
 
     @Override
@@ -105,6 +115,11 @@ public class StockItemServiceImpl implements StockItemService {
 
         item.setCode(code);
         UnitCatalog.Units units = unitCatalog.load();
+        // Todos los movimientos de stock están en la unidad de inventario: con movimientos ya no cambia
+        if (!units.idOf(dto.stockUnit()).equals(item.getStockUnitId()) && usageCheck.hasStockMovements(id)) {
+            throw new ConflictException("El artículo " + item.getCode() + " ya tiene movimientos de stock en '"
+                    + units.codeOf(item.getStockUnitId()) + "': su unidad de inventario no se puede cambiar");
+        }
         String categoryName = apply(item, dto, units);
         if (dto.active() != null) {
             item.setActive(dto.active());
@@ -157,6 +172,46 @@ public class StockItemServiceImpl implements StockItemService {
                         "El proveedor " + supplierId + " no tiene precio para el artículo " + stockItemId));
         supplierPriceRepository.delete(price);
         logger.info("Proveedor {} retirado del artículo {}", supplierId, stockItemId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PurchasePriceDTO> getPriceHistory(Long stockItemId) {
+        findItem(stockItemId);
+        UnitCatalog.Units units = unitCatalog.load();
+        Map<Long, String> supplierNames = supplierService.getSuppliers(null).stream()
+                .collect(Collectors.toMap(SupplierDTO::id, SupplierDTO::legalName));
+
+        return priceHistoryRepository.findByStockItemIdOrderByPurchasedOnDescIdDesc(stockItemId).stream()
+                .map(entry -> new PurchasePriceDTO(entry.getSupplierId(), supplierNames.get(entry.getSupplierId()),
+                        units.codeOf(entry.getUnitId()), entry.getUnitPrice(), entry.getPurchasedOn(),
+                        entry.getReference()))
+                .toList();
+    }
+
+    @Override
+    public void recordPurchasePrice(Long stockItemId, Long supplierId, String unit, BigDecimal unitPrice,
+                                    LocalDate purchasedOn, String reference) {
+        StockItem item = findItem(stockItemId);
+        UnitCatalog.Units units = unitCatalog.load();
+        Long unitId = units.idOf(unit);
+        priceHistoryRepository.save(new PurchasePriceHistory(stockItemId, supplierId, unitId, unitPrice,
+                purchasedOn, reference));
+
+        // El último precio pagado pasa a ser la tarifa, en la unidad en la que ya estuviera
+        StockItemSupplier tariff = supplierPriceRepository.findByStockItemIdAndSupplierId(stockItemId, supplierId)
+                .orElseGet(() -> {
+                    StockItemSupplier created = new StockItemSupplier(item, supplierId);
+                    created.setPurchaseUnitId(unitId);
+                    return created;
+                });
+        String tariffUnit = units.codeOf(tariff.getPurchaseUnitId());
+        BigDecimal tariffPrice = tariffUnit.equals(unit)
+                ? unitPrice
+                : PurchaseOrderTotals.priceInOrderedUnit(unitPrice,
+                        units.converterFor(item.getConversions()).factor(tariffUnit, unit));
+        tariff.setUnitPrice(tariffPrice);
+        supplierPriceRepository.save(tariff);
     }
 
     /**

@@ -1,9 +1,11 @@
 package com.barandgo.crm.purchasing.internal;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import com.barandgo.crm.purchasing.PurchaseOrderStatus;
 import com.barandgo.crm.shared.BadRequestException;
@@ -112,6 +114,35 @@ public class PurchaseOrder {
     public void cancel() {
         transitionTo(PurchaseOrderStatus.CANCELLED);
         this.cancelledAt = Instant.now();
+    }
+
+    /**
+     * Suma lo recibido a cada línea (en la unidad de la línea) y pasa a RECEIVED si todas están
+     * completas o a PARTIALLY_RECEIVED si no. Se admite recibir de más: el proveedor manda lo que manda.
+     */
+    public void registerReceipt(Map<Long, BigDecimal> receivedByLineId) {
+        if (status != PurchaseOrderStatus.SENT && status != PurchaseOrderStatus.PARTIALLY_RECEIVED) {
+            throw new ConflictException("Solo se recibe mercancía de un pedido enviado (estado actual: " + status + ")");
+        }
+        receivedByLineId.forEach((lineId, quantity) -> lines.stream()
+                .filter(line -> line.getId().equals(lineId))
+                .findFirst()
+                .orElseThrow(() -> new BadRequestException("La línea " + lineId + " no pertenece al pedido " + number))
+                .addReceived(quantity));
+
+        boolean complete = lines.stream().allMatch(PurchaseOrderLine::isFullyReceived);
+        PurchaseOrderStatus target = complete ? PurchaseOrderStatus.RECEIVED : PurchaseOrderStatus.PARTIALLY_RECEIVED;
+        if (target != status) {
+            transitionTo(target);
+        }
+    }
+
+    /** Da por recibido un pedido aunque falte mercancía (el proveedor no mandará el resto). */
+    public void close() {
+        if (status == PurchaseOrderStatus.DRAFT) {
+            throw new ConflictException("Un borrador no se cierra: se envía o se borra");
+        }
+        transitionTo(PurchaseOrderStatus.RECEIVED);
     }
 
     public Long getId() {

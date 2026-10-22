@@ -32,6 +32,11 @@ import com.barandgo.crm.catalog.ProductCategoryService;
 import com.barandgo.crm.catalog.ProductService;
 import com.barandgo.crm.reservations.ReservationService;
 import com.barandgo.crm.masterdata.SupplierService;
+import com.barandgo.crm.inventory.GoodsReceiptService;
+import com.barandgo.crm.inventory.InventoryService;
+import com.barandgo.crm.inventory.ReplenishmentService;
+import com.barandgo.crm.inventory.StockCountService;
+import com.barandgo.crm.inventory.WarehouseService;
 import com.barandgo.crm.masterdata.UnitOfMeasureService;
 import com.barandgo.crm.masterdata.VatRateService;
 import com.barandgo.crm.purchasing.PurchaseOrderService;
@@ -86,6 +91,21 @@ class SecurityRulesTest {
 
     @MockitoBean
     private PurchaseOrderService purchaseOrderService;
+
+    @MockitoBean
+    private WarehouseService warehouseService;
+
+    @MockitoBean
+    private InventoryService inventoryService;
+
+    @MockitoBean
+    private GoodsReceiptService goodsReceiptService;
+
+    @MockitoBean
+    private StockCountService stockCountService;
+
+    @MockitoBean
+    private ReplenishmentService replenishmentService;
 
     @Test
     void catalogIsPublic() throws Exception {
@@ -317,8 +337,58 @@ class SecurityRulesTest {
     }
 
     @Test
+    void staffSeesQuantitiesButNotCostsNorAdjustments() throws Exception {
+        when(inventoryService.getStock(any(), any())).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/inventory/stock").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.STAFF)))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/inventory/valuation").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.STAFF)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/inventory/movements").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.STAFF)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/inventory/adjustments")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(UserRole.STAFF))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"warehouseId\":1,\"stockItemId\":1,\"quantity\":-1,\"reason\":\"Rotura\"}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/inventory/replenishment").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.STAFF)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void staffReceivesTransfersAndCountsButManagerOpensAndClosesCounts() throws Exception {
+        String transfer = "{\"fromWarehouseId\":1,\"toWarehouseId\":2,\"stockItemId\":1,\"quantity\":1}";
+        when(inventoryService.transfer(any(), any())).thenReturn(List.of());
+
+        mockMvc.perform(post("/api/inventory/transfers")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(UserRole.STAFF))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(transfer))
+                .andExpect(status().isCreated());
+        mockMvc.perform(post("/api/stock-counts")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(UserRole.STAFF))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"warehouseId\":1}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/stock-counts/1/close").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.STAFF)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/goods-receipts").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.STAFF)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/stock-items/1/price-history").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.STAFF)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void customerHasNoAccessToInventory() throws Exception {
+        mockMvc.perform(get("/api/inventory/stock").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.CUSTOMER)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/warehouses").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.CUSTOMER)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void pathWithoutRuleIsDeniedEvenToAdmin() throws Exception {
-        mockMvc.perform(get("/api/inventory").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.ADMIN)))
+        mockMvc.perform(get("/api/sin-configurar").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.ADMIN)))
                 .andExpect(status().isForbidden());
     }
 

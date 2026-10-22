@@ -146,6 +146,24 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
         logger.info("Pedido a proveedor {} borrado", order.getNumber());
     }
 
+    @Override
+    public PurchaseOrderDTO closePurchaseOrder(Long id) {
+        PurchaseOrder order = findOrder(id);
+        order.close();
+
+        logger.info("Pedido a proveedor {} cerrado como recibido", order.getNumber());
+        return toDTO(purchaseOrderRepository.save(order), unitCatalog.load(),
+                supplierService.getSupplierById(order.getSupplierId()).legalName());
+    }
+
+    @Override
+    public void registerReceipt(Long id, Map<Long, BigDecimal> receivedByLineId) {
+        PurchaseOrder order = findOrder(id);
+        order.registerReceipt(receivedByLineId);
+        purchaseOrderRepository.save(order);
+        logger.info("Recepción registrada en el pedido {}: estado {}", order.getNumber(), order.getStatus());
+    }
+
     private void applyHeader(PurchaseOrder order, PurchaseOrderRequestDTO request, SupplierDTO supplier) {
         LocalDate expected = request.expectedDate();
         if (expected == null && supplier.leadTimeDays() != null) {
@@ -245,7 +263,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
             StockItem item = line.getStockItem();
             lines.add(new PurchaseOrderDTO.Line(line.getId(), line.getLineNumber(), item.getId(), item.getCode(),
                     item.getName(), units.codeOf(line.getUnitId()), line.getQuantity(), line.getUnitPrice(),
-                    line.getVatRate(), totals.lineAmounts().get(i)));
+                    line.getVatRate(), totals.lineAmounts().get(i), line.getReceivedQuantity()));
         }
         List<PurchaseOrderDTO.VatBreakdown> breakdown = totals.vatGroups().stream()
                 .map(group -> new PurchaseOrderDTO.VatBreakdown(group.vatRate(), group.base(), group.vat()))

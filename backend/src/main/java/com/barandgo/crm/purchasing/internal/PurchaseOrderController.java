@@ -71,6 +71,11 @@ public class PurchaseOrderController {
         return ResponseEntity.ok(purchaseOrderService.cancelPurchaseOrder(id));
     }
 
+    @PostMapping("/{id}/close")
+    public ResponseEntity<PurchaseOrderDTO> closePurchaseOrder(@PathVariable Long id) {
+        return ResponseEntity.ok(purchaseOrderService.closePurchaseOrder(id));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletePurchaseOrder(@PathVariable Long id) {
         purchaseOrderService.deletePurchaseOrder(id);

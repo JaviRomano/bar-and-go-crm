@@ -36,7 +36,8 @@ public record PurchaseOrderDTO(
             BigDecimal quantity,
             BigDecimal unitPrice,
             BigDecimal vatRate,
-            BigDecimal amount) {
+            BigDecimal amount,
+            BigDecimal receivedQuantity) {
     }
 
     public record VatBreakdown(BigDecimal vatRate, BigDecimal base, BigDecimal vat) {

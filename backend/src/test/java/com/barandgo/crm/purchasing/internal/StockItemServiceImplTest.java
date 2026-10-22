@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -29,6 +30,7 @@ import com.barandgo.crm.masterdata.VatRateService;
 import com.barandgo.crm.purchasing.ItemUnitConversionDTO;
 import com.barandgo.crm.purchasing.StockItemDTO;
 import com.barandgo.crm.purchasing.StockItemSupplierDTO;
+import com.barandgo.crm.purchasing.StockItemUsageCheck;
 import com.barandgo.crm.shared.BadRequestException;
 import com.barandgo.crm.shared.ConflictException;
 
@@ -42,6 +44,9 @@ class StockItemServiceImplTest {
     private StockItemSupplierRepository supplierPriceRepository;
 
     @Mock
+    private PurchasePriceHistoryRepository priceHistoryRepository;
+
+    @Mock
     private UnitOfMeasureService unitService;
 
     @Mock
@@ -53,6 +58,9 @@ class StockItemServiceImplTest {
     @Mock
     private SupplierService supplierService;
 
+    @Mock
+    private StockItemUsageCheck usageCheck;
+
     private StockItemServiceImpl service;
 
     @BeforeEach
@@ -62,8 +70,9 @@ class StockItemServiceImplTest {
         lenient().when(vatRateService.getVatRate(2L))
                 .thenReturn(new VatRateDTO(2L, "Reducido", new BigDecimal("10.00"), true));
         lenient().when(stockItemRepository.save(any(StockItem.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        service = new StockItemServiceImpl(stockItemRepository, supplierPriceRepository, new UnitCatalog(unitService),
-                itemCategoryService, vatRateService, supplierService);
+        service = new StockItemServiceImpl(stockItemRepository, supplierPriceRepository, priceHistoryRepository,
+                new UnitCatalog(unitService),
+                itemCategoryService, vatRateService, supplierService, usageCheck);
     }
 
     @Test
@@ -167,6 +176,45 @@ class StockItemServiceImplTest {
         assertThat(saved.supplierId()).isEqualTo(3L);
         assertThat(saved.purchaseUnit()).isEqualTo("caja");
         assertThat(saved.unitPrice()).isEqualByComparingTo("7.20");
+    }
+
+    @Test
+    void stockUnitCannotChangeOnceThereAreMovements() {
+        when(stockItemRepository.findById(7L)).thenReturn(Optional.of(PurchasingFixtures.bottledWater(7L)));
+        when(usageCheck.hasStockMovements(7L)).thenReturn(true);
+        StockItemDTO countedByBox = new StockItemDTO(null, "AGUA-50", "Agua 50 cl", 1L, null, "caja", "caja", "caja",
+                null, null, 2L, null, null, false, null, null);
+
+        assertThatThrownBy(() -> service.updateStockItem(7L, countedByBox))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("unidad de inventario");
+    }
+
+    @Test
+    void stockUnitCanChangeWhileThereAreNoMovements() {
+        when(stockItemRepository.findById(7L)).thenReturn(Optional.of(PurchasingFixtures.bottledWater(7L)));
+        when(usageCheck.hasStockMovements(7L)).thenReturn(false);
+        StockItemDTO countedByBox = new StockItemDTO(null, "AGUA-50", "Agua 50 cl", 1L, null, "caja", "caja", "caja",
+                null, null, 2L, null, null, false, null, null);
+
+        assertThat(service.updateStockItem(7L, countedByBox).stockUnit()).isEqualTo("caja");
+    }
+
+    @Test
+    void purchasePriceIsRecordedAndBecomesTariffInItsUnit() {
+        StockItem water = PurchasingFixtures.bottledWater(7L);
+        StockItemSupplier tariff = new StockItemSupplier(water, 3L);
+        tariff.setPurchaseUnitId(PurchasingFixtures.CAJA);
+        tariff.setUnitPrice(new BigDecimal("7.20"));
+        when(stockItemRepository.findById(7L)).thenReturn(Optional.of(water));
+        when(supplierPriceRepository.findByStockItemIdAndSupplierId(7L, 3L)).thenReturn(Optional.of(tariff));
+
+        // Se compró por unidades a 0,40: la tarifa por caja pasa a 24 x 0,40 = 9,60
+        service.recordPurchasePrice(7L, 3L, "ud", new BigDecimal("0.40"), LocalDate.now(), "AL-1");
+
+        verify(priceHistoryRepository).save(any(PurchasePriceHistory.class));
+        assertThat(tariff.getUnitPrice()).isEqualByComparingTo("9.60");
+        verify(supplierPriceRepository).save(tariff);
     }
 
     private static StockItemDTO water(List<ItemUnitConversionDTO> conversions) {

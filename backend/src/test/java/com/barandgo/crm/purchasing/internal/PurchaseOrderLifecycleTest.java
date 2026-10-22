@@ -16,6 +16,7 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import com.barandgo.crm.purchasing.PurchaseOrderStatus;
 import com.barandgo.crm.shared.BadRequestException;
@@ -80,6 +81,82 @@ class PurchaseOrderLifecycleTest {
         order.transitionTo(RECEIVED);
 
         assertThatThrownBy(order::cancel).isInstanceOf(ConflictException.class);
+    }
+
+    @Test
+    void partialReceiptThenRestCompletesTheOrder() {
+        PurchaseOrder order = orderWithLines("10", "5");
+        order.send();
+        PurchaseOrderLine first = order.getLines().get(0);
+        PurchaseOrderLine second = order.getLines().get(1);
+
+        order.registerReceipt(Map.of(first.getId(), new BigDecimal("10"), second.getId(), new BigDecimal("2")));
+        assertThat(order.getStatus()).isEqualTo(PARTIALLY_RECEIVED);
+
+        // Una segunda recepción parcial no cambia de estado (no es una transición)
+        order.registerReceipt(Map.of(second.getId(), new BigDecimal("1")));
+        assertThat(order.getStatus()).isEqualTo(PARTIALLY_RECEIVED);
+
+        order.registerReceipt(Map.of(second.getId(), new BigDecimal("2")));
+        assertThat(order.getStatus()).isEqualTo(RECEIVED);
+        assertThat(second.getReceivedQuantity()).isEqualByComparingTo("5");
+    }
+
+    @Test
+    void receivingMoreThanOrderedCompletesTheLine() {
+        PurchaseOrder order = orderWithLines("4");
+        order.send();
+
+        order.registerReceipt(Map.of(order.getLines().get(0).getId(), new BigDecimal("5")));
+
+        assertThat(order.getStatus()).isEqualTo(RECEIVED);
+    }
+
+    @Test
+    void draftCannotReceiveGoods() {
+        PurchaseOrder order = orderWithLines("4");
+
+        assertThatThrownBy(() -> order.registerReceipt(Map.of(order.getLines().get(0).getId(), BigDecimal.ONE)))
+                .isInstanceOf(ConflictException.class);
+    }
+
+    @Test
+    void lineOfAnotherOrderIsRejected() {
+        PurchaseOrder order = orderWithLines("4");
+        order.send();
+
+        assertThatThrownBy(() -> order.registerReceipt(Map.of(999L, BigDecimal.ONE)))
+                .isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    void partiallyReceivedOrderCanBeClosedShort() {
+        PurchaseOrder order = orderWithLines("10");
+        order.send();
+        order.registerReceipt(Map.of(order.getLines().get(0).getId(), new BigDecimal("6")));
+
+        order.close();
+
+        assertThat(order.getStatus()).isEqualTo(RECEIVED);
+    }
+
+    @Test
+    void draftCannotBeClosed() {
+        assertThatThrownBy(() -> orderWithLines("1").close()).isInstanceOf(ConflictException.class);
+    }
+
+    private static PurchaseOrder orderWithLines(String... quantities) {
+        PurchaseOrder order = new PurchaseOrder();
+        long id = 1;
+        for (String quantity : quantities) {
+            PurchaseOrderLine line = new PurchaseOrderLine();
+            ReflectionTestUtils.setField(line, "id", id++);
+            line.setQuantity(new BigDecimal(quantity));
+            line.setUnitPrice(BigDecimal.ONE);
+            line.setVatRate(BigDecimal.TEN);
+            order.addLine(line);
+        }
+        return order;
     }
 
     private static PurchaseOrder orderWithOneLine() {
