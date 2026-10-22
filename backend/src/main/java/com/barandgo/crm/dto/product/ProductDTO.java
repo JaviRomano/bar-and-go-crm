@@ -22,8 +22,10 @@ public class ProductDTO {
     @DecimalMin(value = "0.01", message = "El precio debe ser mayor que 0")
     private BigDecimal price;
     
-    @NotBlank(message = "La categoría es obligatoria")
-    @Size(max = 100, message = "La categoría no puede exceder 100 caracteres")
+    @NotNull(message = "La categoría es obligatoria")
+    private Long categoryId;
+
+    // Solo en respuestas: nombre de la categoría, para mostrar y filtrar sin otra petición
     private String category;
     
     private Boolean available = true;
@@ -66,6 +68,14 @@ public class ProductDTO {
         this.price = price;
     }
     
+    public Long getCategoryId() {
+        return categoryId;
+    }
+
+    public void setCategoryId(Long categoryId) {
+        this.categoryId = categoryId;
+    }
+
     public String getCategory() {
         return category;
     }

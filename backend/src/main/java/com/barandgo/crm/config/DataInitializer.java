@@ -9,15 +9,23 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import com.barandgo.crm.entity.Product;
+import com.barandgo.crm.entity.ProductCategory;
 import com.barandgo.crm.entity.User;
+import com.barandgo.crm.enums.StaffTag;
 import com.barandgo.crm.enums.UserRole;
+import com.barandgo.crm.repository.ProductCategoryRepository;
 import com.barandgo.crm.repository.ProductRepository;
 import com.barandgo.crm.repository.UserRepository;
 
 import java.math.BigDecimal;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Carga usuarios y carta de demostración en una base de datos vacía. Solo en el perfil dev.
+ * Las categorías de carta las crea la migración V4; aquí solo se buscan por nombre.
  * Las credenciales de demo son intencionadas y están documentadas en el README.
  */
 @Component
@@ -28,18 +36,29 @@ public class DataInitializer implements CommandLineRunner {
     
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
+    private final ProductCategoryRepository categoryRepository;
     private final PasswordEncoder passwordEncoder;
     private final String adminPassword;
+    private final String managerPassword;
+    private final String staffPassword;
     private final String customerPassword;
     
+    private Map<String, ProductCategory> categoriesByName;
+    
     public DataInitializer(UserRepository userRepository, ProductRepository productRepository,
+                           ProductCategoryRepository categoryRepository,
                            PasswordEncoder passwordEncoder,
                            @Value("${app.demo.admin-password}") String adminPassword,
+                           @Value("${app.demo.manager-password}") String managerPassword,
+                           @Value("${app.demo.staff-password}") String staffPassword,
                            @Value("${app.demo.customer-password}") String customerPassword) {
         this.userRepository = userRepository;
         this.productRepository = productRepository;
+        this.categoryRepository = categoryRepository;
         this.passwordEncoder = passwordEncoder;
         this.adminPassword = adminPassword;
+        this.managerPassword = managerPassword;
+        this.staffPassword = staffPassword;
         this.customerPassword = customerPassword;
     }
     
@@ -58,23 +77,32 @@ public class DataInitializer implements CommandLineRunner {
     }
     
     private void initializeUsers() {
-        createUser("Admin Demo", "admin@bar.com", adminPassword, "+34912345678", UserRole.ADMIN);
-        createUser("Ellen Ripley", "ripleynostromo@example.com", customerPassword, "+34698765432", UserRole.CUSTOMER);
-        createUser("Lucas Trotacielos", "xwingluke@example.com", customerPassword, "+34611222333", UserRole.CUSTOMER);
-        createUser("Sarah Connor", "tepersigue@example.com", customerPassword, "+34655444555", UserRole.CUSTOMER);
+        createUser("Admin Demo", "admin@bar.com", adminPassword, "+34912345678", UserRole.ADMIN, Set.of());
+        createUser("Encargado Demo", "encargado@bar.com", managerPassword, "+34912345679", UserRole.MANAGER,
+                Set.of(StaffTag.FLOOR));
+        createUser("Personal Demo", "personal@bar.com", staffPassword, "+34912345680", UserRole.STAFF,
+                Set.of(StaffTag.KITCHEN, StaffTag.BAR));
+        createUser("Ellen Ripley", "ripleynostromo@example.com", customerPassword, "+34698765432", UserRole.CUSTOMER, Set.of());
+        createUser("Lucas Trotacielos", "xwingluke@example.com", customerPassword, "+34611222333", UserRole.CUSTOMER, Set.of());
+        createUser("Sarah Connor", "tepersigue@example.com", customerPassword, "+34655444555", UserRole.CUSTOMER, Set.of());
     }
     
-    private void createUser(String name, String email, String rawPassword, String phone, UserRole role) {
+    private void createUser(String name, String email, String rawPassword, String phone, UserRole role,
+                            Set<StaffTag> tags) {
         User user = new User();
         user.setName(name);
         user.setEmail(email);
         user.setPassword(passwordEncoder.encode(rawPassword));
         user.setPhone(phone);
         user.setRole(role);
+        user.setTags(tags);
         userRepository.save(user);
     }
     
     private void initializeProducts() {
+        categoriesByName = categoryRepository.findAll().stream()
+                .collect(Collectors.toMap(ProductCategory::getName, Function.identity()));
+        
         // ENTRANTES
         createProduct("Croquetas de Jamón", "Croquetas caseras de jamón ibérico (8 unidades)", 
                      new BigDecimal("8.50"), "ENTRANTES");
@@ -148,7 +176,11 @@ public class DataInitializer implements CommandLineRunner {
         product.setName(name);
         product.setDescription(description);
         product.setPrice(price);
-        product.setCategory(category);
+        ProductCategory productCategory = categoriesByName.get(category);
+        if (productCategory == null) {
+            throw new IllegalStateException("Falta la categoría de carta '" + category + "' (la crea la migración V4)");
+        }
+        product.setCategory(productCategory);
         product.setAvailable(true);
         productRepository.save(product);
     }

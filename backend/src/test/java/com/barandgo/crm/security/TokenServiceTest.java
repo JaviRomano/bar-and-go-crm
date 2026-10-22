@@ -38,7 +38,7 @@ class TokenServiceTest {
         assertThat(currentUser.id()).isEqualTo(7L);
         assertThat(currentUser.email()).isEqualTo("ana@example.com");
         assertThat(currentUser.role()).isEqualTo(UserRole.CUSTOMER);
-        assertThat(currentUser.isAdmin()).isFalse();
+        assertThat(currentUser.isBackOffice()).isFalse();
         assertThat(tokenService.getExpirationSeconds()).isEqualTo(Duration.ofMinutes(15).toSeconds());
     }
 

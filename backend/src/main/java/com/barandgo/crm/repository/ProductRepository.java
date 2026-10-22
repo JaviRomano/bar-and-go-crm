@@ -9,8 +9,13 @@ import com.barandgo.crm.entity.Product;
 
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
-    
-    List<Product> findByAvailable(Boolean available);
-    
-    List<Product> findByCategoryAndAvailable(String category, Boolean available);
+
+    // Carta completa (sin archivados), en el orden de las categorías
+    List<Product> findByActiveTrueOrderByCategorySortOrderAscNameAsc();
+
+    List<Product> findByActiveTrueAndAvailableTrueOrderByCategorySortOrderAscNameAsc();
+
+    List<Product> findByCategoryNameAndActiveTrueAndAvailableTrueOrderByNameAsc(String categoryName);
+
+    boolean existsByCategoryId(Long categoryId);
 }

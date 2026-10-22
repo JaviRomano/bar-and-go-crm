@@ -1,11 +1,13 @@
 package com.barandgo.crm.dto.user;
 
+import com.barandgo.crm.enums.StaffTag;
 import com.barandgo.crm.enums.UserRole;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import java.util.Set;
 
 public class UserRequestDTO {
     
@@ -28,6 +30,9 @@ public class UserRequestDTO {
     
     @NotNull(message = "El rol es obligatorio")
     private UserRole role;
+
+    // Solo para personal del local; un cliente no lleva etiquetas
+    private Set<StaffTag> tags;
     
     // Constructor vacío
     public UserRequestDTO() {
@@ -72,5 +77,13 @@ public class UserRequestDTO {
     
     public void setRole(UserRole role) {
         this.role = role;
+    }
+
+    public Set<StaffTag> getTags() {
+        return tags;
+    }
+
+    public void setTags(Set<StaffTag> tags) {
+        this.tags = tags;
     }
 }

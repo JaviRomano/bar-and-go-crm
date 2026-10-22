@@ -1,8 +1,11 @@
 package com.barandgo.crm.dto.user;
 
 import com.barandgo.crm.entity.User;
+import com.barandgo.crm.enums.StaffTag;
 import com.barandgo.crm.enums.UserRole;
 import java.time.LocalDateTime;
+import java.util.EnumSet;
+import java.util.Set;
 
 public class UserResponseDTO {
 
@@ -11,6 +14,7 @@ public class UserResponseDTO {
     private String email;
     private String phone;
     private UserRole role;
+    private Set<StaffTag> tags = EnumSet.noneOf(StaffTag.class);
     private LocalDateTime dateOfCreation;
 
     public UserResponseDTO() {
@@ -24,6 +28,7 @@ public class UserResponseDTO {
         dto.setEmail(user.getEmail());
         dto.setPhone(user.getPhone());
         dto.setRole(user.getRole());
+        dto.setTags(user.getTags().isEmpty() ? EnumSet.noneOf(StaffTag.class) : EnumSet.copyOf(user.getTags()));
         dto.setDateOfCreation(user.getDateOfCreation());
         return dto;
     }
@@ -66,6 +71,14 @@ public class UserResponseDTO {
     
     public void setRole(UserRole role) {
         this.role = role;
+    }
+    
+    public Set<StaffTag> getTags() {
+        return tags;
+    }
+    
+    public void setTags(Set<StaffTag> tags) {
+        this.tags = tags;
     }
     
     public LocalDateTime getDateOfCreation() {

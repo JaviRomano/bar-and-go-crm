@@ -141,7 +141,7 @@ public class ReservationServiceImpl implements ReservationService {
     public ReservationResponseDTO cancelReservation(Long id, CurrentUser requester) {
         Reservation reservation = findReservation(id);
 
-        if (!requester.isAdmin()
+        if (!requester.isBackOffice()
                 && !reservation.getUserPhone().equals(findUser(requester.id()).getPhone())) {
             throw new ForbiddenException("No tienes acceso a esta reserva");
         }

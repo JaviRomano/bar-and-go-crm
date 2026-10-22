@@ -19,6 +19,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -50,6 +51,9 @@ public class Order {
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_method", nullable = false, length = 10)
     private PaymentMethod paymentMethod;
+    
+    @Version
+    private Long version;
     
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> items = new ArrayList<>();
@@ -137,5 +141,9 @@ public class Order {
     
     public void setItems(List<OrderItem> items) {
         this.items = items;
+    }
+    
+    public Long getVersion() {
+        return version;
     }
 }

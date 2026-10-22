@@ -15,7 +15,8 @@ public record CurrentUser(Long id, String email, UserRole role) {
         return new CurrentUser(userId.longValue(), jwt.getSubject(), UserRole.valueOf(role));
     }
 
-    public boolean isAdmin() {
-        return role == UserRole.ADMIN;
+    /** Personal del local (ADMIN, MANAGER o STAFF): puede ver pedidos y reservas de cualquier cliente. */
+    public boolean isBackOffice() {
+        return role.isBackOffice();
     }
 }

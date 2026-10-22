@@ -2,7 +2,9 @@ package com.barandgo.crm.config;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -25,9 +27,13 @@ import com.barandgo.crm.dto.order.OrderResponseDTO;
 import com.barandgo.crm.enums.UserRole;
 import com.barandgo.crm.security.TokenService;
 import com.barandgo.crm.service.AuthService;
+import com.barandgo.crm.service.ItemCategoryService;
 import com.barandgo.crm.service.OrderService;
+import com.barandgo.crm.service.ProductCategoryService;
 import com.barandgo.crm.service.ProductService;
 import com.barandgo.crm.service.ReservationService;
+import com.barandgo.crm.service.SupplierService;
+import com.barandgo.crm.service.UnitOfMeasureService;
 import com.barandgo.crm.service.UserService;
 
 @WebMvcTest
@@ -57,6 +63,18 @@ class SecurityRulesTest {
 
     @MockitoBean
     private ReservationService reservationService;
+
+    @MockitoBean
+    private ProductCategoryService productCategoryService;
+
+    @MockitoBean
+    private ItemCategoryService itemCategoryService;
+
+    @MockitoBean
+    private SupplierService supplierService;
+
+    @MockitoBean
+    private UnitOfMeasureService unitOfMeasureService;
 
     @Test
     void catalogIsPublic() throws Exception {
@@ -105,7 +123,7 @@ class SecurityRulesTest {
         mockMvc.perform(post("/api/products")
                         .header(HttpHeaders.AUTHORIZATION, bearer(UserRole.CUSTOMER))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Gratis\",\"price\":0.01,\"category\":\"POSTRES\"}"))
+                        .content("{\"name\":\"Gratis\",\"price\":0.01,\"categoryId\":1}"))
                 .andExpect(status().isForbidden());
     }
 
@@ -149,6 +167,103 @@ class SecurityRulesTest {
         mockMvc.perform(options("/api/orders/me")
                         .header(HttpHeaders.ORIGIN, "https://evil.example.com")
                         .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "GET"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void menuCategoriesArePublicButOnlyManagersEditThem() throws Exception {
+        when(productCategoryService.getCategories(false)).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/product-categories")).andExpect(status().isOk());
+        mockMvc.perform(post("/api/product-categories")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(UserRole.STAFF))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"TAPAS\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void managerInheritsStaffPermissionsAndAdminInheritsManager() throws Exception {
+        when(orderService.getUpcomingOrders()).thenReturn(List.of());
+        when(supplierService.getSuppliers(any())).thenReturn(List.of());
+
+        // Regla de STAFF: la cumplen MANAGER y ADMIN por la jerarquía
+        mockMvc.perform(get("/api/orders/upcoming").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.MANAGER)))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/suppliers").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.ADMIN)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void staffOperatesOrdersButCannotDeleteThem() throws Exception {
+        when(orderService.updateOrderStatus(any(), any())).thenReturn(new OrderResponseDTO());
+
+        mockMvc.perform(patch("/api/orders/5/status")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(UserRole.STAFF))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"READY\"}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(delete("/api/orders/5").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.STAFF)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(delete("/api/orders/5").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.MANAGER)))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void staffCannotManageUsersOrCatalog() throws Exception {
+        mockMvc.perform(get("/api/users").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.STAFF)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(delete("/api/products/1").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.STAFF)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void customerCannotReachPurchasingData() throws Exception {
+        mockMvc.perform(get("/api/suppliers").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.CUSTOMER)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/item-categories").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.CUSTOMER)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/units").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.CUSTOMER)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void staffReadsSuppliersButCannotWriteThem() throws Exception {
+        when(supplierService.getSuppliers(any())).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/suppliers").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.STAFF)))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/suppliers")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(UserRole.STAFF))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"taxId\":\"B12345674\",\"legalName\":\"Proveedor SL\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void onlyAdminChangesUnitConfiguration() throws Exception {
+        when(unitOfMeasureService.getUnits()).thenReturn(List.of());
+        String conversion = "{\"fromUnit\":\"kg\",\"toUnit\":\"g\",\"factor\":1000}";
+
+        mockMvc.perform(get("/api/units").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.MANAGER)))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/units").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.STAFF)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/units/conversions")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(UserRole.MANAGER))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(conversion))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/units/conversions")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(UserRole.ADMIN))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(conversion))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void pathWithoutRuleIsDeniedEvenToAdmin() throws Exception {
+        mockMvc.perform(get("/api/inventory").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.ADMIN)))
                 .andExpect(status().isForbidden());
     }
 

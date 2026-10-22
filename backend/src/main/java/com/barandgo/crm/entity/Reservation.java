@@ -11,6 +11,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -44,6 +45,9 @@ public class Reservation {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private ReservationStatus status;
+    
+    @Version
+    private Long version;
     
     @PrePersist
     protected void onCreate() {
@@ -119,5 +123,9 @@ public class Reservation {
     
     public void setStatus(ReservationStatus status) {
         this.status = status;
+    }
+    
+    public Long getVersion() {
+        return version;
     }
 }

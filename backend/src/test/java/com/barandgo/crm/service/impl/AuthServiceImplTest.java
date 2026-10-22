@@ -83,12 +83,12 @@ class AuthServiceImplTest {
     }
 
     @Test
-    void registerAlwaysCreatesCustomer() {
+    void registerDelegatesToCustomerRegistration() {
         UserResponseDTO created = new UserResponseDTO();
         created.setId(8L);
         created.setEmail("nuevo@example.com");
         created.setRole(UserRole.CUSTOMER);
-        when(userService.createUser(any(UserRequestDTO.class))).thenReturn(created);
+        when(userService.registerCustomer(any(UserRequestDTO.class))).thenReturn(created);
         when(tokenService.generateToken(eq(8L), anyString(), eq(UserRole.CUSTOMER))).thenReturn("token");
 
         RegisterRequestDTO register = new RegisterRequestDTO();
@@ -100,8 +100,8 @@ class AuthServiceImplTest {
         authService.register(register);
 
         ArgumentCaptor<UserRequestDTO> captor = ArgumentCaptor.forClass(UserRequestDTO.class);
-        verify(userService).createUser(captor.capture());
-        assertThat(captor.getValue().getRole()).isEqualTo(UserRole.CUSTOMER);
+        verify(userService).registerCustomer(captor.capture());
+        assertThat(captor.getValue().getEmail()).isEqualTo("nuevo@example.com");
     }
 
     private static LoginRequestDTO login(String email, String password) {

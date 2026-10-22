@@ -6,7 +6,6 @@ import com.barandgo.crm.dto.auth.RegisterRequestDTO;
 import com.barandgo.crm.dto.user.UserRequestDTO;
 import com.barandgo.crm.dto.user.UserResponseDTO;
 import com.barandgo.crm.entity.User;
-import com.barandgo.crm.enums.UserRole;
 import com.barandgo.crm.exception.UnauthorizedException;
 import com.barandgo.crm.repository.UserRepository;
 import com.barandgo.crm.security.TokenService;
@@ -53,9 +52,8 @@ public class AuthServiceImpl implements AuthService {
         userRequestDTO.setEmail(registerRequestDTO.getEmail());
         userRequestDTO.setPassword(registerRequestDTO.getPassword());
         userRequestDTO.setPhone(registerRequestDTO.getPhone());
-        userRequestDTO.setRole(UserRole.CUSTOMER);
 
-        return buildResponse(userService.createUser(userRequestDTO));
+        return buildResponse(userService.registerCustomer(userRequestDTO));
     }
 
     private AuthResponseDTO buildResponse(UserResponseDTO user) {

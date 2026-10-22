@@ -68,12 +68,13 @@ public class OrderServiceImpl implements OrderService {
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Producto no encontrado con ID: " + itemDTO.getProductId()));
 
-            if (!Boolean.TRUE.equals(product.getAvailable())) {
+            if (!Boolean.TRUE.equals(product.getAvailable()) || !Boolean.TRUE.equals(product.getActive())) {
                 throw new BadRequestException("El producto '" + product.getName() + "' no está disponible");
             }
 
             // Nombre y precio se copian de la carta: el cliente no puede fijarlos
             OrderItem item = new OrderItem();
+            item.setProduct(product);
             item.setProductName(product.getName());
             item.setUnitPrice(product.getPrice());
             item.setQuantity(itemDTO.getQuantity());
@@ -95,7 +96,7 @@ public class OrderServiceImpl implements OrderService {
     public OrderResponseDTO getOrderById(Long id, CurrentUser requester) {
         Order order = findOrder(id);
 
-        if (!requester.isAdmin() && !order.getUser().getId().equals(requester.id())) {
+        if (!requester.isBackOffice() && !order.getUser().getId().equals(requester.id())) {
             throw new ForbiddenException("No tienes acceso a este pedido");
         }
 
@@ -204,6 +205,8 @@ public class OrderServiceImpl implements OrderService {
     private OrderItemDTO convertItemToDTO(OrderItem item) {
         OrderItemDTO dto = new OrderItemDTO();
         dto.setId(item.getId());
+        // getId() en un proxy LAZY no dispara la carga del producto
+        dto.setProductId(item.getProduct() != null ? item.getProduct().getId() : null);
         dto.setProductName(item.getProductName());
         dto.setQuantity(item.getQuantity());
         dto.setUnitPrice(item.getUnitPrice());

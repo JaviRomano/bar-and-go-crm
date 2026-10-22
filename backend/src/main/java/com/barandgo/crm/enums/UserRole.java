@@ -2,5 +2,12 @@ package com.barandgo.crm.enums;
 
 public enum UserRole {
     CUSTOMER,
-    ADMIN
+    STAFF,
+    MANAGER,
+    ADMIN;
+
+    /** Personal del local: encargado, trabajador o administrador. */
+    public boolean isBackOffice() {
+        return this != CUSTOMER;
+    }
 }
