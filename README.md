@@ -4,7 +4,7 @@ Aplicación de gestión para un bar-restaurante: carta, pedidos para recoger, re
 
 | Capa | Tecnología |
 |---|---|
-| Backend | Java 17, Spring Boot 4.1, Spring Security (OAuth2 Resource Server, JWT HS256), Spring Data JPA |
+| Backend | Java 25, Spring Boot 4.1, Spring Security (OAuth2 Resource Server, JWT HS256), Spring Data JPA |
 | Base de datos | PostgreSQL 17 (docker-compose) |
 | Frontend | React 19, Vite 7, React Router 7 |
 | Tests | JUnit 5, Mockito, MockMvc, Testcontainers |
@@ -21,7 +21,7 @@ Documentación adicional: [guía de arranque](docs/GUIA-ARRANQUE.md) (paso a pas
 
 ## Puesta en marcha
 
-Requisitos: JDK 17+, Node 20.19+ o 22.12+ (requisito de Vite 7), Docker.
+Requisitos: JDK 25, Node 20.19+ o 22.12+ (requisito de Vite 7), Docker.
 
 ```bash
 cp .env.example .env
