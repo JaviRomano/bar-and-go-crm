@@ -1,6 +1,6 @@
 # Evaluación: migrar a Spring Modulith
 
-Fecha: 2026-10-22. Estado: **DECISIÓN PENDIENTE**. No se ha modificado código; la prueba descrita en el apartado 2 se hizo de forma temporal y se deshizo.
+Fecha: 2026-10-22. Estado: **aplicada** (opción A) en la Fase 1.5; ver [01-5-modularizacion.md](01-5-modularizacion.md). La prueba del apartado 2 se hizo de forma temporal sobre el código de la Fase 1.
 
 ## 1. Compatibilidad
 

@@ -4,7 +4,7 @@ Aplicación de gestión para un bar-restaurante: carta, pedidos para recoger, re
 
 | Capa | Tecnología |
 |---|---|
-| Backend | Java 25, Spring Boot 4.1, Spring Security (OAuth2 Resource Server, JWT HS256), Spring Data JPA |
+| Backend | Java 25, Spring Boot 4.1, Spring Modulith 2.1, Spring Security (OAuth2 Resource Server, JWT HS256), Spring Data JPA, Flyway |
 | Base de datos | PostgreSQL 17 (docker-compose) |
 | Frontend | React 19, Vite 7, React Router 7 |
 | Tests | JUnit 5, Mockito, MockMvc, Testcontainers |
@@ -16,6 +16,21 @@ bar-and-go-crm/
 ├── docker-compose.yml   PostgreSQL para desarrollo
 └── .env.example         Variables de entorno
 ```
+
+### Módulos del backend
+
+El backend es un monolito modular ([Spring Modulith](https://spring.io/projects/spring-modulith)): un paquete por área de negocio, con su API en la raíz del paquete y la implementación en `internal`. Un test (`ModularityTests`) falla si un módulo usa tipos internos de otro, crea un ciclo o depende de un módulo no declarado.
+
+| Módulo | Contenido | Depende de |
+|---|---|---|
+| `shared` | Excepciones y su traducción a respuestas HTTP | — |
+| `identity` | Usuarios, roles, JWT, reglas de acceso | shared |
+| `catalog` | Carta: productos y categorías | shared |
+| `ordering` | Pedidos para recoger | shared, identity, catalog |
+| `reservations` | Reservas de mesa | shared, identity |
+| `masterdata` | Unidades de medida, proveedores, categorías de compra | shared |
+
+`./mvnw test` genera además los diagramas de módulos (PlantUML/C4) en `backend/target/spring-modulith-docs`.
 
 Documentación adicional: [guía de arranque](docs/GUIA-ARRANQUE.md) (paso a paso, despliegue de prueba y problemas frecuentes) y [registro de cambios y motivos](docs/CAMBIOS.md).
 
@@ -183,6 +198,7 @@ cd backend
 | Slice web (`@WebMvcTest`) | Reglas de autorización por rol y ruta, jerarquía de roles; CORS |
 | Integración (Testcontainers) | Flujo completo contra PostgreSQL con el esquema de Flyway: pedidos, roles, proveedores, archivado de productos, bloqueo optimista |
 | Migraciones (Testcontainers + Flyway) | Migración de datos existentes (categorías, enlace pedido-producto) y adopción de una BD anterior a Flyway |
+| Modularidad (Spring Modulith) | Fronteras entre módulos y dependencias declaradas; genera la documentación de módulos |
 
 Los tests de integración necesitan Docker; si no está disponible, se omiten y el resto de la suite se ejecuta igual.
 
@@ -193,6 +209,7 @@ Los tests de integración necesitan Docker; si no está disponible, se omiten y 
 - **Spring Boot 4.1**: la línea 3.x ya no tiene soporte OSS.
 - **DTOs existentes como clases con constructor vacío, getters y setters**, porque los servicios los rellenan campo a campo (`dto.setX(...)`). Los DTOs añadidos con la ampliación ERP (categorías, unidades, proveedores) son `record`: se construyen de una vez desde la entidad (`from(...)`), son inmutables, y Jackson y Bean Validation los admiten sin configuración.
 - **Flyway con `ddl-auto=validate`** en todos los perfiles: el esquema está versionado y revisable, y Hibernate detecta al arrancar cualquier entidad que no coincida con él.
+- **Monolito modular con Spring Modulith** en lugar de paquetes por capa (`controller`, `service`, `entity`...). Cada área de negocio es un módulo con API explícita y dependencias verificadas en los tests. Prepara la ampliación ERP (compras, inventario, escandallos) sin que los módulos nuevos se acoplen a los internos de los existentes. Cuando un módulo necesita algo de otro que dependería de él, se invierte la dependencia: la carta pregunta si un producto tiene ventas a través de `ProductSalesCheck`, que implementa el módulo de pedidos.
 - **Bloqueo optimista (`@Version`)** en las entidades que se editan desde el panel: si dos personas modifican el mismo registro, la segunda recibe un 409 en vez de pisar el cambio.
 - **Enums en inglés**, con las etiquetas visibles resueltas en el frontend.
 
